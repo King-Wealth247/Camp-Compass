@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "@/app/context/AuthContext";
 import { Calendar, MapPin, Clock, User } from "lucide-react";
-import { timetableData } from "../data/mockData";
+import { timetableData } from "@/app/data/mockData";
 
 const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
 const TIME_SLOTS = [

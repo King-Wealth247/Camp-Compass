@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Search, Building2, MapPin, Users, Filter } from "lucide-react";
-import { halls, buildings, campuses } from "../data/mockData";
+import { halls, buildings, campuses } from "@/app/data/mockData";
 
 export function HallSearchPage() {
   const [searchQuery, setSearchQuery] = useState("");

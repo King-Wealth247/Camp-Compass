@@ -1,8 +1,9 @@
+"use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "@/app/context/AuthContext";
 import { MapPin, Calendar, Clock } from "lucide-react";
-import { ImageWithFallback } from "../components/figma/ImageWithFallback";
+import { ImageWithFallback } from "@/app/components/figma/ImageWithFallback";
 
 export function LoginPage() {
   const [email, setEmail] = useState("");
@@ -15,10 +16,9 @@ export function LoginPage() {
     e.preventDefault();
     setError("");
 
-    if (login(email, password)) {
-      // Determine dashboard based on role
-      const role = email.split("@")[0]; // student, staff, admin, registrar
-      router.push(`/dashboard/${role}`);
+    const user = login(email, password);
+    if (user) {
+      router.push(`/dashboard/${user.role}`);
     } else {
       setError("Invalid email or password");
     }

@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "@/app/context/AuthContext";
 import {
   MapPin,
   Calendar,
@@ -14,6 +14,18 @@ import {
   Settings
 } from "lucide-react";
 import { useEffect } from "react";
+import { ChangePasswordModal } from "@/components/pages/ChangePasswordModal";
+
+// Routes each role is allowed to access
+const ROLE_ALLOWED_PATHS: Record<string, string[]> = {
+  student: ["/dashboard/student", "/dashboard/map", "/dashboard/timetable", "/dashboard/notifications"],
+  staff: ["/dashboard/staff", "/dashboard/map", "/dashboard/timetable", "/dashboard/availability", "/dashboard/notifications"],
+  admin: ["/dashboard/admin", "/dashboard/map", "/dashboard/timetable", "/dashboard/halls", "/dashboard/availability", "/dashboard/notifications"],
+  registrar: ["/dashboard/registrar", "/dashboard/map"],
+};
+
+// Routes locked behind tuition payment for students
+const TUITION_GATED_PATHS = ["/dashboard/timetable", "/dashboard/notifications"];
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth();
@@ -23,8 +35,17 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!user) {
       router.push("/");
+      return;
     }
-  }, [user, router]);
+    const allowed = ROLE_ALLOWED_PATHS[user.role] ?? [];
+    if (!allowed.includes(pathname)) {
+      router.replace(`/dashboard/${user.role}`);
+      return;
+    }
+    if (user.role === "student" && !user.tuitionPaid && TUITION_GATED_PATHS.includes(pathname)) {
+      router.replace("/dashboard/student");
+    }
+  }, [user, router, pathname]);
 
   if (!user) return null;
 
@@ -75,6 +96,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
+      {user.isFirstLogin && <ChangePasswordModal />}
       {/* Sidebar */}
       <aside className="w-64 bg-white border-r border-gray-200 flex flex-col">
         <div className="p-6 border-b border-gray-200">

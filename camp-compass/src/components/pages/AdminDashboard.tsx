@@ -1,6 +1,6 @@
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "@/app/context/AuthContext";
 import { Calendar, Building2, Users, AlertTriangle } from "lucide-react";
-import { halls, timetableData } from "../data/mockData";
+import { halls, timetableData } from "@/app/data/mockData";
 
 export function AdminDashboard() {
   const { user } = useAuth();

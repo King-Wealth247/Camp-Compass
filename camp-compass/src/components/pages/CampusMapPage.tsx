@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { MapPin, Building2, Navigation, Search } from "lucide-react";
-import { campuses, buildings, halls } from "../data/mockData";
-import { ImageWithFallback } from "../components/figma/ImageWithFallback";
+import { campuses, buildings, halls } from "@/app/data/mockData";
+import { ImageWithFallback } from "@/app/components/figma/ImageWithFallback";
 
 export function CampusMapPage() {
   const [selectedCampus, setSelectedCampus] = useState(campuses[0]);

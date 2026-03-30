@@ -1,3 +1,4 @@
+"use client";
 import { useRouter } from "next/navigation";
 import { Home, MapPin } from "lucide-react";
 

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Bell, CheckCircle, Info, AlertTriangle, Trash2, Check } from "lucide-react";
-import { notifications as initialNotifications } from "../data/mockData";
+import { notifications as initialNotifications } from "@/app/data/mockData";
 
 export function NotificationsPage() {
   const [notifications, setNotifications] = useState(initialNotifications);

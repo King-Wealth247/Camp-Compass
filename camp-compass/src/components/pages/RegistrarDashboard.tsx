@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "@/app/context/AuthContext";
 import { UserPlus, Users, Mail, Key, Search } from "lucide-react";
 
 export function RegistrarDashboard() {

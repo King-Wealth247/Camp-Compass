@@ -1,7 +1,7 @@
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "@/app/context/AuthContext";
 import { MapPin, Calendar, Bell, BookOpen, Clock, AlertCircle } from "lucide-react";
-import { timetableData, notifications } from "../data/mockData";
-import { ImageWithFallback } from "../components/figma/ImageWithFallback";
+import { timetableData, notifications } from "@/app/data/mockData";
+import { ImageWithFallback } from "@/app/components/figma/ImageWithFallback";
 
 export function StudentDashboard() {
   const { user } = useAuth();
