@@ -150,6 +150,9 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: '#EFF6FF',
+    width: '100%',
+    maxWidth: 600,
+    alignSelf: 'center',
   },
   scroll: {
     flexGrow: 1,

@@ -65,6 +65,7 @@ npm start --clear
 ### 5. View the App
 - **Physical Device:** Open the Expo Go app on your phone and scan the QR code displayed in your terminal.
 - **Simulation:** Press `i` in the terminal to launch the iOS Simulator (macOS only) or `a` to launch the Android Emulator (requires Android Studio).
+- **Web Browser:** If you don't have a mobile device, press `w` in the terminal. Expo will prompt you to install web dependencies (`react-native-web`, `react-dom`, `@expo/metro-runtime`) and then open the app in your local browser.
 
 ---
 

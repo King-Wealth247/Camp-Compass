@@ -122,6 +122,9 @@ const styles = StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: '#F8FAFF',
+    width: '100%',
+    maxWidth: 600,
+    alignSelf: 'center',
   },
   header: {
     backgroundColor: '#2563EB',
