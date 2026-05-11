@@ -1,0 +1,92 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  student
+  staff
+  admin
+  registrar
+}
+
+model Institution {
+  id        String    @id @default(cuid())
+  name      String
+  createdAt DateTime  @default(now())
+  users     User[]
+  campuses  Campus[]
+}
+
+model Campus {
+  id            String    @id @default(cuid())
+  name          String
+  institution   Institution @relation(fields: [institutionId], references: [id])
+  institutionId String
+  buildings     Building[]
+  timetables    Timetable[]
+  createdAt     DateTime  @default(now())
+}
+
+model Building {
+  id        String   @id @default(cuid())
+  name      String
+  campus    Campus   @relation(fields: [campusId], references: [id])
+  campusId  String
+  halls     Hall[]
+  createdAt DateTime @default(now())
+}
+
+model Hall {
+  id          String    @id @default(cuid())
+  name        String
+  capacity    Int
+  building    Building  @relation(fields: [buildingId], references: [id])
+  buildingId  String
+  timetables  Timetable[]
+  isAvailable Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+}
+
+model Course {
+  id         String    @id @default(cuid())
+  code       String    @unique
+  title      String
+  department String
+  level      String
+  instructor String
+  timetables Timetable[]
+  createdAt  DateTime  @default(now())
+}
+
+model Timetable {
+  id        String    @id @default(cuid())
+  campus    Campus    @relation(fields: [campusId], references: [id])
+  campusId  String
+  course    Course    @relation(fields: [courseId], references: [id])
+  courseId  String
+  hall      Hall      @relation(fields: [hallId], references: [id])
+  hallId    String
+  startTime DateTime
+  endTime   DateTime
+  day       String
+  createdAt DateTime  @default(now())
+}
+
+model User {
+  id             String      @id @default(cuid())
+  email          String      @unique
+  password       String
+  name           String
+  role           UserRole    @default(student)
+  department     String?
+  level          String?
+  tuitionPaid    Boolean     @default(false)
+  institution    Institution @relation(fields: [institutionId], references: [id])
+  institutionId  String
+  createdAt      DateTime    @default(now())
+}
