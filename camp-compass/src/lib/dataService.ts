@@ -4,10 +4,15 @@ export interface Hall {
   id: string;
   name: string;
   capacity: number;
-  isAvailable: boolean;
+  available: boolean;
   building: {
     id: string;
     name: string;
+    campusId: string;
+    campus?: {
+      id: string;
+      name: string;
+    };
   };
   createdAt: string;
 }
@@ -22,6 +27,34 @@ export interface Course {
   createdAt: string;
 }
 
+export interface Campus {
+  id: string;
+  name: string;
+  institutionId: string;
+  institution?: {
+    id: string;
+    name: string;
+  };
+  buildings?: Array<{
+    id: string;
+    name: string;
+    campusId: string;
+  }>;
+  createdAt: string;
+}
+
+export interface User {
+  id: string;
+  email: string;
+  name: string;
+  role: string;
+  department?: string;
+  level?: string;
+  tuitionPaid: boolean;
+  institutionId: string;
+  createdAt: string;
+}
+
 export interface Timetable {
   id: string;
   course: Course;
@@ -32,22 +65,57 @@ export interface Timetable {
   createdAt: string;
 }
 
+function normalizeHall(raw: any): Hall {
+  return {
+    ...raw,
+    available: raw.available ?? raw.isAvailable ?? false,
+    building: {
+      ...raw.building,
+      campus: raw.building?.campus,
+    },
+  };
+}
+
 export class DataService {
   // Hall endpoints
   async getHalls(): Promise<ApiResponse<Hall[]>> {
-    return apiClient.get<Hall[]>('/api/halls');
+    const response = await apiClient.get<any[]>('/api/halls');
+    if (response.data) {
+      response.data = response.data.map(normalizeHall);
+    }
+    return response as ApiResponse<Hall[]>;
   }
 
   async getHall(id: string): Promise<ApiResponse<Hall>> {
-    return apiClient.get<Hall>(`/api/halls/${id}`);
+    const response = await apiClient.get<any>(`/api/halls/${id}`);
+    if (response.data) {
+      response.data = normalizeHall(response.data);
+    }
+    return response as ApiResponse<Hall>;
   }
 
   async createHall(data: Omit<Hall, 'id' | 'createdAt'>): Promise<ApiResponse<Hall>> {
-    return apiClient.post<Hall>('/api/halls', data);
+    const payload = {
+      ...data,
+      isAvailable: data.available,
+    };
+    const response = await apiClient.post<any>('/api/halls', payload);
+    if (response.data) {
+      response.data = normalizeHall(response.data);
+    }
+    return response as ApiResponse<Hall>;
   }
 
   async updateHall(id: string, data: Partial<Hall>): Promise<ApiResponse<Hall>> {
-    return apiClient.put<Hall>(`/api/halls/${id}`, data);
+    const payload = {
+      ...data,
+      isAvailable: data.available,
+    };
+    const response = await apiClient.put<any>(`/api/halls/${id}`, payload);
+    if (response.data) {
+      response.data = normalizeHall(response.data);
+    }
+    return response as ApiResponse<Hall>;
   }
 
   async deleteHall(id: string): Promise<ApiResponse<{ message: string }>> {
@@ -67,6 +135,56 @@ export class DataService {
     return apiClient.post<Course>('/api/courses', data);
   }
 
+  async updateCourse(id: string, data: Partial<Course>): Promise<ApiResponse<Course>> {
+    return apiClient.put<Course>(`/api/courses/${id}`, data);
+  }
+
+  async deleteCourse(id: string): Promise<ApiResponse<{ message: string }>> {
+    return apiClient.delete(`/api/courses/${id}`);
+  }
+
+  // Campus endpoints
+  async getCampuses(): Promise<ApiResponse<Campus[]>> {
+    return apiClient.get<Campus[]>('/api/campuses');
+  }
+
+  async getCampus(id: string): Promise<ApiResponse<Campus>> {
+    return apiClient.get<Campus>(`/api/campuses/${id}`);
+  }
+
+  async createCampus(data: Omit<Campus, 'id' | 'createdAt' | 'buildings' | 'institution'>): Promise<ApiResponse<Campus>> {
+    return apiClient.post<Campus>('/api/campuses', data);
+  }
+
+  async updateCampus(id: string, data: Partial<Campus>): Promise<ApiResponse<Campus>> {
+    return apiClient.put<Campus>(`/api/campuses/${id}`, data);
+  }
+
+  async deleteCampus(id: string): Promise<ApiResponse<{ message: string }>> {
+    return apiClient.delete(`/api/campuses/${id}`);
+  }
+
+  // User endpoints
+  async getUsers(): Promise<ApiResponse<User[]>> {
+    return apiClient.get<User[]>('/api/users');
+  }
+
+  async getUser(id: string): Promise<ApiResponse<User>> {
+    return apiClient.get<User>(`/api/users/${id}`);
+  }
+
+  async createUser(data: Omit<User, 'id' | 'createdAt'> & { password: string }): Promise<ApiResponse<User>> {
+    return apiClient.post<User>('/api/users', data);
+  }
+
+  async updateUser(id: string, data: Partial<User> & { password?: string }): Promise<ApiResponse<User>> {
+    return apiClient.put<User>(`/api/users/${id}`, data);
+  }
+
+  async deleteUser(id: string): Promise<ApiResponse<{ message: string }>> {
+    return apiClient.delete(`/api/users/${id}`);
+  }
+
   // Timetable endpoints
   async getTimetables(): Promise<ApiResponse<Timetable[]>> {
     return apiClient.get<Timetable[]>('/api/timetable');
@@ -81,7 +199,13 @@ export class DataService {
     level: string
   ): Promise<ApiResponse<Timetable[]>> {
     return apiClient.get<Timetable[]>(
-      `/api/timetable?department=${department}&level=${level}`
+      `/api/timetable?department=${encodeURIComponent(department)}&level=${encodeURIComponent(level)}`
+    );
+  }
+
+  async getTimetablesByInstructor(instructor: string): Promise<ApiResponse<Timetable[]>> {
+    return apiClient.get<Timetable[]>(
+      `/api/timetable?instructor=${encodeURIComponent(instructor)}`
     );
   }
 

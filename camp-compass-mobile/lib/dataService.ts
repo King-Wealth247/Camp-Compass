@@ -4,10 +4,15 @@ export interface Hall {
   id: string;
   name: string;
   capacity: number;
-  isAvailable: boolean;
+  available: boolean;
   building: {
     id: string;
     name: string;
+    campusId: string;
+    campus?: {
+      id: string;
+      name: string;
+    };
   };
   createdAt: string;
 }
@@ -32,26 +37,33 @@ export interface Timetable {
   createdAt: string;
 }
 
+function normalizeHall(raw: any): Hall {
+  return {
+    ...raw,
+    available: raw.available ?? raw.isAvailable ?? false,
+    building: {
+      ...raw.building,
+      campus: raw.building?.campus,
+    },
+  };
+}
+
 export class DataService {
   // Hall endpoints
   async getHalls(): Promise<ApiResponse<Hall[]>> {
-    return apiClient.get<Hall[]>('/api/halls');
+    const response = await apiClient.get<any[]>('/api/halls');
+    if (response.data) {
+      response.data = response.data.map(normalizeHall);
+    }
+    return response as ApiResponse<Hall[]>;
   }
 
   async getHall(id: string): Promise<ApiResponse<Hall>> {
-    return apiClient.get<Hall>(`/api/halls/${id}`);
-  }
-
-  async createHall(data: Omit<Hall, 'id' | 'createdAt'>): Promise<ApiResponse<Hall>> {
-    return apiClient.post<Hall>('/api/halls', data);
-  }
-
-  async updateHall(id: string, data: Partial<Hall>): Promise<ApiResponse<Hall>> {
-    return apiClient.put<Hall>(`/api/halls/${id}`, data);
-  }
-
-  async deleteHall(id: string): Promise<ApiResponse<{ message: string }>> {
-    return apiClient.delete(`/api/halls/${id}`);
+    const response = await apiClient.get<any>(`/api/halls/${id}`);
+    if (response.data) {
+      response.data = normalizeHall(response.data);
+    }
+    return response as ApiResponse<Hall>;
   }
 
   // Course endpoints
@@ -81,7 +93,13 @@ export class DataService {
     level: string
   ): Promise<ApiResponse<Timetable[]>> {
     return apiClient.get<Timetable[]>(
-      `/api/timetable?department=${department}&level=${level}`
+      `/api/timetable?department=${encodeURIComponent(department)}&level=${encodeURIComponent(level)}`
+    );
+  }
+
+  async getTimetablesByInstructor(instructor: string): Promise<ApiResponse<Timetable[]>> {
+    return apiClient.get<Timetable[]>(
+      `/api/timetable?instructor=${encodeURIComponent(instructor)}`
     );
   }
 

@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/app/context/AuthContext";
-import { Calendar, MapPin, Clock, User } from "lucide-react";
-import { timetableData } from "@/app/data/mockData";
+import { Calendar, MapPin, User } from "lucide-react";
+import { dataService, Timetable } from "@/lib/dataService";
 
 const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
 const TIME_SLOTS = [
@@ -19,28 +19,47 @@ const TIME_SLOTS = [
 export function TimetablePage() {
   const { user } = useAuth();
   const [viewMode, setViewMode] = useState<"week" | "list">("week");
+  const [timetables, setTimetables] = useState<Timetable[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadTimetables = async () => {
+      setLoading(true);
+      const response = await dataService.getTimetables();
+      if (response.data) {
+        setTimetables(response.data);
+      }
+      setLoading(false);
+    };
+
+    if (user) {
+      loadTimetables();
+    }
+  }, [user]);
 
   if (!user) return null;
 
-  // Filter timetable based on user role
-  const getUserTimetable = () => {
+  const userTimetable = useMemo(() => {
     if (user.role === "student") {
-      return timetableData.filter(
+      return timetables.filter(
         (entry) =>
-          entry.department === user.department && entry.level === user.level
+          entry.course.department === user.department &&
+          entry.course.level === user.level
       );
-    } else if (user.role === "staff") {
-      return timetableData.filter((entry) => entry.lecturerName === user.name);
-    } else {
-      return timetableData;
     }
-  };
 
-  const userTimetable = getUserTimetable();
+    if (user.role === "staff") {
+      return timetables.filter(
+        (entry) => entry.course.instructor === user.name
+      );
+    }
+
+    return timetables;
+  }, [timetables, user]);
 
   const getTimeSlotEntry = (day: string, timeSlot: string) => {
     return userTimetable.find((entry) => {
-      const entryStart = entry.startTime;
+      const entryStart = entry.startTime.split("T")[1]?.slice(0, 5) ?? entry.startTime;
       const slotStart = timeSlot.split("-")[0];
       return entry.day === day && entryStart === slotStart;
     });
@@ -55,9 +74,7 @@ export function TimetablePage() {
             <h1 className="text-3xl font-bold text-gray-900">
               {user.role === "student" ? "My Timetable" : "Teaching Schedule"}
             </h1>
-            <p className="text-gray-600 mt-1">
-              Week of March 24 - 28, 2026
-            </p>
+            <p className="text-gray-600 mt-1">Week of March 24 - 28, 2026</p>
           </div>
           <div className="flex gap-2">
             <button
@@ -86,15 +103,17 @@ export function TimetablePage() {
         {user.role === "student" && (
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
             <p className="text-sm text-blue-900">
-              <strong>{user.department}</strong> • {user.level} •{" "}
-              {userTimetable.length} courses this week
+              <strong>{user.department}</strong> • {user.level} • {userTimetable.length} courses this week
             </p>
           </div>
         )}
       </div>
 
-      {viewMode === "week" ? (
-        /* Week View */
+      {loading ? (
+        <div className="rounded-xl bg-white p-8 shadow-sm border border-gray-100 text-center text-gray-500">
+          Loading timetable...
+        </div>
+      ) : viewMode === "week" ? (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full border-collapse">
@@ -122,24 +141,24 @@ export function TimetablePage() {
                     {DAYS.map((day) => {
                       const entry = getTimeSlotEntry(day, timeSlot);
                       return (
-                        <td key={`${day}-${timeSlot}`} className="p-2">
+                        <td key={`${day}-${timeSlot}`} className="p-2 align-top">
                           {entry ? (
                             <div className="bg-blue-50 border-l-4 border-blue-600 p-3 rounded hover:bg-blue-100 transition cursor-pointer">
                               <p className="font-semibold text-gray-900 text-sm mb-1">
-                                {entry.courseName}
+                                {entry.course.title}
                               </p>
                               <p className="text-xs text-gray-600 mb-2">
-                                {entry.courseCode}
+                                {entry.course.code}
                               </p>
                               <div className="flex flex-col gap-1 text-xs text-gray-600">
                                 <span className="flex items-center gap-1">
                                   <MapPin className="w-3 h-3" />
-                                  {entry.hallCode}
+                                  {entry.hall.name}
                                 </span>
                                 {user.role !== "staff" && (
                                   <span className="flex items-center gap-1">
                                     <User className="w-3 h-3" />
-                                    {entry.lecturerName}
+                                    {entry.course.instructor}
                                   </span>
                                 )}
                               </div>
@@ -157,7 +176,6 @@ export function TimetablePage() {
           </div>
         </div>
       ) : (
-        /* List View */
         <div className="space-y-6">
           {DAYS.map((day) => {
             const dayEntries = userTimetable.filter((entry) => entry.day === day);
@@ -176,37 +194,35 @@ export function TimetablePage() {
                         >
                           <div className="flex flex-col items-center justify-center bg-blue-600 text-white rounded-lg px-4 py-2 min-w-[100px]">
                             <span className="text-lg font-bold">
-                              {entry.startTime}
+                              {entry.startTime.split("T")[1]?.slice(0, 5) ?? entry.startTime}
                             </span>
-                            <span className="text-xs">{entry.endTime}</span>
+                            <span className="text-xs">
+                              {entry.endTime.split("T")[1]?.slice(0, 5) ?? entry.endTime}
+                            </span>
                           </div>
                           <div className="flex-1">
                             <div className="flex items-start justify-between mb-2">
                               <div>
-                                <p className="font-semibold text-gray-900">
-                                  {entry.courseName}
-                                </p>
-                                <p className="text-sm text-gray-600">
-                                  {entry.courseCode}
-                                </p>
+                                <p className="font-semibold text-gray-900">{entry.course.title}</p>
+                                <p className="text-sm text-gray-600">{entry.course.code}</p>
                               </div>
                             </div>
                             <div className="flex flex-wrap gap-4 text-sm text-gray-600">
                               <span className="flex items-center gap-1">
                                 <MapPin className="w-4 h-4" />
-                                {entry.hallCode}
+                                {entry.hall.name}
                               </span>
                               {user.role !== "staff" && (
                                 <span className="flex items-center gap-1">
                                   <User className="w-4 h-4" />
-                                  {entry.lecturerName}
+                                  {entry.course.instructor}
                                 </span>
                               )}
                               {user.role === "admin" && (
                                 <>
                                   <span>•</span>
                                   <span>
-                                    {entry.department} {entry.level}
+                                    {entry.course.department} {entry.course.level}
                                   </span>
                                 </>
                               )}
@@ -216,9 +232,7 @@ export function TimetablePage() {
                       ))}
                     </div>
                   ) : (
-                    <p className="text-center text-gray-500 py-8">
-                      No classes scheduled
-                    </p>
+                    <p className="text-center text-gray-500 py-8">No classes scheduled</p>
                   )}
                 </div>
               </div>

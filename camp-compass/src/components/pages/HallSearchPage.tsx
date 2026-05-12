@@ -1,64 +1,96 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Search, Building2, MapPin, Users, Filter } from "lucide-react";
-import { halls, buildings, campuses } from "@/app/data/mockData";
+import { dataService, Hall } from "@/lib/dataService";
 
 export function HallSearchPage() {
+  const [halls, setHalls] = useState<Hall[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedType, setSelectedType] = useState<string>("all");
   const [selectedCampus, setSelectedCampus] = useState<string>("all");
   const [minCapacity, setMinCapacity] = useState<string>("");
 
-  const filteredHalls = halls.filter((hall) => {
-    const building = buildings.find((b) => b.id === hall.buildingId);
-    const matchesSearch =
-      hall.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      hall.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      building?.code.toLowerCase().includes(searchQuery.toLowerCase());
+  useEffect(() => {
+    const loadHalls = async () => {
+      setIsLoading(true);
+      const response = await dataService.getHalls();
+      if (response.data) {
+        setHalls(response.data);
+      }
+      setIsLoading(false);
+    };
 
-    const matchesType = selectedType === "all" || hall.type === selectedType;
-    
+    loadHalls();
+  }, []);
+
+  const campusOptions = useMemo(() => {
+    const unique = new Map<string, { id: string; name: string }>();
+    halls.forEach((hall) => {
+      const campus = hall.building?.campus;
+      if (campus) {
+        unique.set(campus.id, campus);
+      }
+    });
+    return Array.from(unique.values());
+  }, [halls]);
+
+  const buildingOptions = useMemo(() => {
+    const unique = new Map<string, { id: string; name: string; campusId: string }>();
+    halls.forEach((hall) => {
+      if (hall.building) {
+        unique.set(hall.building.id, {
+          id: hall.building.id,
+          name: hall.building.name,
+          campusId: hall.building.campusId,
+        });
+      }
+    });
+    return Array.from(unique.values());
+  }, [halls]);
+
+  const filteredHalls = halls.filter((hall) => {
+    const building = buildingOptions.find((b) => b.id === hall.building.id);
+    const campus = hall.building?.campus;
+    const hallType = (hall as any).type ?? "General";
+
+    const matchesSearch =
+      hall.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      building?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      campus?.name.toLowerCase().includes(searchQuery.toLowerCase());
+
+    const matchesType =
+      selectedType === "all" || hallType.toLowerCase() === selectedType;
+
     const matchesCampus =
-      selectedCampus === "all" || building?.campusId === selectedCampus;
+      selectedCampus === "all" || hall.building.campusId === selectedCampus;
 
     const matchesCapacity =
-      !minCapacity || hall.capacity >= parseInt(minCapacity);
+      !minCapacity || hall.capacity >= parseInt(minCapacity, 10);
 
     return matchesSearch && matchesType && matchesCampus && matchesCapacity;
   });
 
-  const getHallBuilding = (hallId: string) => {
-    const hall = halls.find((h) => h.id === hallId);
-    return buildings.find((b) => b.id === hall?.buildingId);
-  };
-
-  const getHallCampus = (hallId: string) => {
-    const building = getHallBuilding(hallId);
-    return campuses.find((c) => c.id === building?.campusId);
-  };
+  const getHallBuilding = (hall: Hall) => hall.building;
+  const getHallCampus = (hall: Hall) => hall.building?.campus;
 
   return (
     <div className="p-8">
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Hall Search</h1>
-        <p className="text-gray-600">
-          Search and filter halls by various criteria
-        </p>
+        <p className="text-gray-600">Search and filter halls by available rooms</p>
       </div>
 
       {/* Search and Filters */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-          {/* Search */}
           <div className="lg:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Search
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Search</label>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
                 type="text"
-                placeholder="Hall code, name, or building..."
+                placeholder="Hall name, building, or campus..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-12 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
@@ -66,18 +98,15 @@ export function HallSearchPage() {
             </div>
           </div>
 
-          {/* Campus Filter */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Campus
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Campus</label>
             <select
               value={selectedCampus}
               onChange={(e) => setSelectedCampus(e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
             >
               <option value="all">All Campuses</option>
-              {campuses.map((campus) => (
+              {campusOptions.map((campus) => (
                 <option key={campus.id} value={campus.id}>
                   {campus.name}
                 </option>
@@ -85,11 +114,8 @@ export function HallSearchPage() {
             </select>
           </div>
 
-          {/* Type Filter */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Hall Type
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Hall Type</label>
             <select
               value={selectedType}
               onChange={(e) => setSelectedType(e.target.value)}
@@ -106,9 +132,7 @@ export function HallSearchPage() {
 
         <div className="flex items-center gap-4">
           <div className="flex-1">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Minimum Capacity
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Minimum Capacity</label>
             <input
               type="number"
               placeholder="e.g., 50"
@@ -132,20 +156,19 @@ export function HallSearchPage() {
         </div>
       </div>
 
-      {/* Results */}
       <div className="mb-4 flex items-center justify-between">
         <p className="text-gray-600">
-          <span className="font-semibold text-gray-900">
-            {filteredHalls.length}
-          </span>{" "}
-          {filteredHalls.length === 1 ? "hall" : "halls"} found
+          <span className="font-semibold text-gray-900">{filteredHalls.length}</span>{' '}
+          {filteredHalls.length === 1 ? 'hall' : 'halls'} found
         </p>
+        {isLoading && <p className="text-sm text-gray-500">Loading halls...</p>}
       </div>
 
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredHalls.map((hall) => {
-          const building = getHallBuilding(hall.id);
-          const campus = getHallCampus(hall.id);
+          const building = getHallBuilding(hall);
+          const campus = getHallCampus(hall);
+          const hallType = (hall as any).type ?? 'General';
 
           return (
             <div
@@ -155,17 +178,17 @@ export function HallSearchPage() {
               <div className="bg-gradient-to-br from-blue-600 to-blue-700 p-6 text-white">
                 <div className="flex items-start justify-between mb-4">
                   <div>
-                    <p className="text-2xl font-bold">{hall.code}</p>
-                    <p className="text-blue-100">{hall.name}</p>
+                    <p className="text-2xl font-bold">{hall.name}</p>
+                    <p className="text-blue-100">{building?.name || 'Building'}</p>
                   </div>
                   <span
                     className={`px-3 py-1 rounded-full text-xs font-medium ${
                       hall.available
-                        ? "bg-green-500 text-white"
-                        : "bg-red-500 text-white"
+                        ? 'bg-green-500 text-white'
+                        : 'bg-red-500 text-white'
                     }`}
                   >
-                    {hall.available ? "Available" : "In Use"}
+                    {hall.available ? 'Available' : 'In Use'}
                   </span>
                 </div>
 
@@ -182,28 +205,22 @@ export function HallSearchPage() {
                   <div className="flex items-center gap-3">
                     <Building2 className="w-5 h-5 text-gray-400" />
                     <div>
-                      <p className="text-sm font-medium text-gray-900">
-                        {building?.name}
-                      </p>
-                      <p className="text-xs text-gray-600">
-                        {building?.code} • Floor {hall.floor}
-                      </p>
+                      <p className="text-sm font-medium text-gray-900">{building?.name}</p>
+                      <p className="text-xs text-gray-600">Building</p>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-3">
                     <MapPin className="w-5 h-5 text-gray-400" />
                     <div>
-                      <p className="text-sm font-medium text-gray-900">
-                        {campus?.name}
-                      </p>
-                      <p className="text-xs text-gray-600">{campus?.city}</p>
+                      <p className="text-sm font-medium text-gray-900">{campus?.name || 'Campus'}</p>
+                      <p className="text-xs text-gray-600">Campus</p>
                     </div>
                   </div>
 
                   <div className="pt-3 border-t border-gray-200">
                     <span className="inline-block px-3 py-1 bg-blue-50 text-blue-700 text-xs font-medium rounded-full capitalize">
-                      {hall.type}
+                      {hallType}
                     </span>
                   </div>
                 </div>
@@ -217,13 +234,11 @@ export function HallSearchPage() {
         })}
       </div>
 
-      {filteredHalls.length === 0 && (
+      {!isLoading && filteredHalls.length === 0 && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">
           <Filter className="w-12 h-12 mx-auto mb-4 text-gray-400" />
           <p className="text-gray-600 mb-2">No halls match your criteria</p>
-          <p className="text-sm text-gray-500">
-            Try adjusting your search filters
-          </p>
+          <p className="text-sm text-gray-500">Try adjusting your search filters</p>
         </div>
       )}
     </div>
