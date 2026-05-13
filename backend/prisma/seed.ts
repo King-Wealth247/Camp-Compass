@@ -1,0 +1,187 @@
+import { PrismaClient } from '@prisma/client';
+import bcrypt from 'bcryptjs';
+
+const prisma = new PrismaClient();
+
+async function main() {
+  // Create institution first
+  const institution = await prisma.institution.upsert({
+    where: { id: 'inst-1' },
+    update: {},
+    create: {
+      id: 'inst-1',
+      name: 'Test University',
+    },
+  });
+
+  // Create campus
+  const campus = await prisma.campus.upsert({
+    where: { id: 'campus-1' },
+    update: {},
+    create: {
+      id: 'campus-1',
+      name: 'Main Campus',
+      institutionId: institution.id,
+    },
+  });
+
+  // Create building
+  const building = await prisma.building.upsert({
+    where: { id: 'building-1' },
+    update: {},
+    create: {
+      id: 'building-1',
+      name: 'Computer Science Building',
+      campusId: campus.id,
+    },
+  });
+
+  // Create halls
+  await prisma.hall.upsert({
+    where: { id: 'hall-1' },
+    update: {},
+    create: {
+      id: 'hall-1',
+      name: 'CS Lecture Hall A',
+      capacity: 100,
+      isAvailable: true,
+      buildingId: building.id,
+    },
+  });
+
+  await prisma.hall.upsert({
+    where: { id: 'hall-2' },
+    update: {},
+    create: {
+      id: 'hall-2',
+      name: 'CS Lab 1',
+      capacity: 30,
+      isAvailable: true,
+      buildingId: building.id,
+    },
+  });
+
+  // Create courses
+  await prisma.course.upsert({
+    where: { id: 'course-1' },
+    update: {},
+    create: {
+      id: 'course-1',
+      code: 'CS101',
+      title: 'Introduction to Computer Science',
+      department: 'Computer Science',
+      level: 'Year 1',
+      instructor: 'Dr. John Smith',
+    },
+  });
+
+  await prisma.course.upsert({
+    where: { id: 'course-2' },
+    update: {},
+    create: {
+      id: 'course-2',
+      code: 'CS201',
+      title: 'Data Structures',
+      department: 'Computer Science',
+      level: 'Year 2',
+      instructor: 'Dr. Jane Doe',
+    },
+  });
+
+  // Hash passwords
+  const studentPassword = await bcrypt.hash('student123', 10);
+  const staffPassword = await bcrypt.hash('staff123', 10);
+  const adminPassword = await bcrypt.hash('admin123', 10);
+  const registrarPassword = await bcrypt.hash('registrar123', 10);
+
+  // Create users
+  await prisma.user.upsert({
+    where: { email: 'student@campus.edu' },
+    update: {},
+    create: {
+      email: 'student@campus.edu',
+      password: studentPassword,
+      name: 'Jane Doe',
+      role: 'student',
+      department: 'Computer Science',
+      level: 'Year 3',
+      tuitionPaid: true,
+      institutionId: institution.id,
+    },
+  });
+
+  await prisma.user.upsert({
+    where: { email: 'staff@campus.edu' },
+    update: {},
+    create: {
+      email: 'staff@campus.edu',
+      password: staffPassword,
+      name: 'Dr. John Smith',
+      role: 'staff',
+      department: 'Engineering',
+      institutionId: institution.id,
+    },
+  });
+
+  await prisma.user.upsert({
+    where: { email: 'admin@campus.edu' },
+    update: {},
+    create: {
+      email: 'admin@campus.edu',
+      password: adminPassword,
+      name: 'Admin User',
+      role: 'admin',
+      institutionId: institution.id,
+    },
+  });
+
+  await prisma.user.upsert({
+    where: { email: 'registrar@campus.edu' },
+    update: {},
+    create: {
+      email: 'registrar@campus.edu',
+      password: registrarPassword,
+      name: 'Registrar Office',
+      role: 'registrar',
+      institutionId: institution.id,
+    },
+  });
+
+  // Create timetable entries
+  await prisma.timetable.upsert({
+    where: { id: 'timetable-1' },
+    update: {},
+    create: {
+      campusId: campus.id,
+      courseId: 'course-1',
+      hallId: 'hall-1',
+      startTime: new Date('2026-05-13T09:00:00Z'),
+      endTime: new Date('2026-05-13T11:00:00Z'),
+      day: 'Monday',
+    },
+  });
+
+  await prisma.timetable.upsert({
+    where: { id: 'timetable-2' },
+    update: {},
+    create: {
+      campusId: campus.id,
+      courseId: 'course-2',
+      hallId: 'hall-2',
+      startTime: new Date('2026-05-13T14:00:00Z'),
+      endTime: new Date('2026-05-13T16:00:00Z'),
+      day: 'Tuesday',
+    },
+  });
+
+  console.log('Database seeded successfully');
+}
+
+main()
+  .catch((e) => {
+    console.error(e);
+    process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });

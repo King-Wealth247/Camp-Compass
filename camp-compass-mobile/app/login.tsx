@@ -11,16 +11,25 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const router = useRouter();
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     setError('');
-    const user = login(email.trim(), password);
-    if (user) {
-      router.replace(`/(app)/${user.role}/dashboard` as any);
-    } else {
-      setError('Invalid email or password');
+    setLoading(true);
+
+    try {
+      const user = await login(email.trim(), password);
+      if (user) {
+        router.replace(`/(app)/${user.role}/dashboard` as any);
+      } else {
+        setError('Invalid email or password');
+      }
+    } catch (err) {
+      setError('Login failed. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -118,8 +127,8 @@ export default function LoginPage() {
             </View>
           )}
 
-          <TouchableOpacity style={styles.signInButton} onPress={handleSubmit} activeOpacity={0.85}>
-            <Text style={styles.signInText}>Sign In</Text>
+          <TouchableOpacity style={styles.signInButton} onPress={handleSubmit} activeOpacity={0.85} disabled={loading}>
+            <Text style={styles.signInText}>{loading ? "Signing In..." : "Sign In"}</Text>
           </TouchableOpacity>
 
           {/* Demo Accounts */}
