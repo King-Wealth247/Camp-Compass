@@ -25,6 +25,10 @@ model Institution {
 model Campus {
   id            String    @id @default(cuid())
   name          String
+  city          String?
+  region        String?
+  latitude      Float?
+  longitude     Float?
   institution   Institution @relation(fields: [institutionId], references: [id])
   institutionId String
   buildings     Building[]
@@ -35,8 +39,12 @@ model Campus {
 model Building {
   id        String   @id @default(cuid())
   name      String
+  code      String?
   campus    Campus   @relation(fields: [campusId], references: [id])
   campusId  String
+  floors    Int      @default(1)
+  latitude  Float?
+  longitude Float?
   halls     Hall[]
   createdAt DateTime @default(now())
 }
@@ -45,6 +53,7 @@ model Hall {
   id          String    @id @default(cuid())
   name        String
   capacity    Int
+  floor       Int?
   building    Building  @relation(fields: [buildingId], references: [id])
   buildingId  String
   timetables  Timetable[]

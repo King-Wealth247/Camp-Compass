@@ -21,18 +21,54 @@ async function main() {
     create: {
       id: 'campus-1',
       name: 'Main Campus',
+      city: 'Capital City',
+      region: 'Central',
+      latitude: 40.7128,
+      longitude: -74.006,
       institutionId: institution.id,
     },
   });
 
-  // Create building
+  // Create buildings
   const building = await prisma.building.upsert({
     where: { id: 'building-1' },
     update: {},
     create: {
       id: 'building-1',
       name: 'Computer Science Building',
+      code: 'CSB',
       campusId: campus.id,
+      floors: 4,
+      latitude: 40.7128,
+      longitude: -74.006,
+    },
+  });
+
+  const buildingTwo = await prisma.building.upsert({
+    where: { id: 'building-2' },
+    update: {},
+    create: {
+      id: 'building-2',
+      name: 'Engineering Block',
+      code: 'ENG',
+      campusId: campus.id,
+      floors: 5,
+      latitude: 40.7134,
+      longitude: -74.0055,
+    },
+  });
+
+  const buildingThree = await prisma.building.upsert({
+    where: { id: 'building-3' },
+    update: {},
+    create: {
+      id: 'building-3',
+      name: 'Library Complex',
+      code: 'LIB',
+      campusId: campus.id,
+      floors: 3,
+      latitude: 40.7119,
+      longitude: -74.0058,
     },
   });
 
@@ -46,6 +82,7 @@ async function main() {
       capacity: 100,
       isAvailable: true,
       buildingId: building.id,
+      floor: 1,
     },
   });
 
@@ -58,6 +95,59 @@ async function main() {
       capacity: 30,
       isAvailable: true,
       buildingId: building.id,
+      floor: 2,
+    },
+  });
+
+  await prisma.hall.upsert({
+    where: { id: 'hall-3' },
+    update: {},
+    create: {
+      id: 'hall-3',
+      name: 'Engineering Workshop',
+      capacity: 60,
+      isAvailable: true,
+      buildingId: buildingTwo.id,
+      floor: 1,
+    },
+  });
+
+  await prisma.hall.upsert({
+    where: { id: 'hall-4' },
+    update: {},
+    create: {
+      id: 'hall-4',
+      name: 'Engineering Lab B',
+      capacity: 40,
+      isAvailable: true,
+      buildingId: buildingTwo.id,
+      floor: 2,
+    },
+  });
+
+  await prisma.hall.upsert({
+    where: { id: 'hall-5' },
+    update: {},
+    create: {
+      id: 'hall-5',
+      name: 'Library Seminar Room',
+      capacity: 80,
+      isAvailable: true,
+      buildingId: buildingThree.id,
+      floor: 1,
+    },
+  });
+
+  await prisma.hall.upsert({
+    where: { id: 'hall-6' },
+    update: {},
+    create: {
+      id: 'hall-6',
+      name: 'Library Study Atrium',
+      capacity: 120,
+      isAvailable: true,
+      buildingId: buildingThree.id,
+      floor: 2,
     },
   });
 

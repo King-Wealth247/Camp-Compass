@@ -6,10 +6,10 @@ const publicRoutes = ['/api/auth/login', '/api/auth/register', '/api/health'];
 
 // Role-based route access control
 const roleBasedRoutes: Record<string, string[]> = {
-  admin: ['/api/admin', '/api/halls', '/api/campuses', '/api/timetable'],
-  registrar: ['/api/registrar', '/api/users'],
-  staff: ['/api/staff', '/api/availability', '/api/timetable'],
-  student: ['/api/student', '/api/timetable'],
+  admin: ['/api/admin', '/api/halls', '/api/campuses', '/api/buildings', '/api/timetable'],
+  registrar: ['/api/registrar', '/api/users', '/api/campuses', '/api/buildings', '/api/halls'],
+  staff: ['/api/staff', '/api/timetable', '/api/campuses', '/api/buildings', '/api/halls'],
+  student: ['/api/student', '/api/timetable', '/api/campuses', '/api/buildings', '/api/halls'],
 };
 
 export function middleware(request: NextRequest) {

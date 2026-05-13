@@ -5,6 +5,7 @@ export interface Hall {
   name: string;
   capacity: number;
   available: boolean;
+  floor: number;
   building: {
     id: string;
     name: string;
@@ -14,6 +15,21 @@ export interface Hall {
       name: string;
     };
   };
+  createdAt: string;
+}
+
+export interface Building {
+  id: string;
+  name: string;
+  code?: string;
+  campusId: string;
+  campus?: {
+    id: string;
+    name: string;
+  };
+  floors: number;
+  latitude?: number;
+  longitude?: number;
   createdAt: string;
 }
 
@@ -30,16 +46,16 @@ export interface Course {
 export interface Campus {
   id: string;
   name: string;
+  city?: string;
+  region?: string;
+  latitude?: number;
+  longitude?: number;
   institutionId: string;
   institution?: {
     id: string;
     name: string;
   };
-  buildings?: Array<{
-    id: string;
-    name: string;
-    campusId: string;
-  }>;
+  buildings?: Building[];
   createdAt: string;
 }
 
@@ -92,6 +108,14 @@ export class DataService {
       response.data = normalizeHall(response.data);
     }
     return response as ApiResponse<Hall>;
+  }
+
+  async searchHalls(query: string): Promise<ApiResponse<Hall[]>> {
+    const response = await apiClient.get<any[]>(`/api/halls/search?q=${encodeURIComponent(query)}`);
+    if (response.data) {
+      response.data = response.data.map(normalizeHall);
+    }
+    return response as ApiResponse<Hall[]>;
   }
 
   async createHall(data: Omit<Hall, 'id' | 'createdAt'>): Promise<ApiResponse<Hall>> {
@@ -162,6 +186,27 @@ export class DataService {
 
   async deleteCampus(id: string): Promise<ApiResponse<{ message: string }>> {
     return apiClient.delete(`/api/campuses/${id}`);
+  }
+
+  // Building endpoints
+  async getBuildings(): Promise<ApiResponse<Building[]>> {
+    return apiClient.get<Building[]>('/api/buildings');
+  }
+
+  async getBuilding(id: string): Promise<ApiResponse<Building>> {
+    return apiClient.get<Building>(`/api/buildings/${id}`);
+  }
+
+  async createBuilding(data: Omit<Building, 'id' | 'createdAt' | 'campus' | 'code'>): Promise<ApiResponse<Building>> {
+    return apiClient.post<Building>('/api/buildings', data);
+  }
+
+  async updateBuilding(id: string, data: Partial<Building>): Promise<ApiResponse<Building>> {
+    return apiClient.put<Building>(`/api/buildings/${id}`, data);
+  }
+
+  async deleteBuilding(id: string): Promise<ApiResponse<{ message: string }>> {
+    return apiClient.delete(`/api/buildings/${id}`);
   }
 
   // User endpoints
