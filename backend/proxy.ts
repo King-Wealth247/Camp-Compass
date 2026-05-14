@@ -6,10 +6,10 @@ const publicRoutes = ['/api/auth/login', '/api/auth/register', '/api/health'];
 
 // Role-based route access control
 const roleBasedRoutes: Record<string, string[]> = {
-  admin: ['/api/admin', '/api/halls', '/api/campuses', '/api/buildings', '/api/timetable'],
+  admin: ['/api/admin', '/api/halls', '/api/campuses', '/api/buildings', '/api/timetable', '/api/users'],
   registrar: ['/api/registrar', '/api/users', '/api/campuses', '/api/buildings', '/api/halls'],
-  staff: ['/api/staff', '/api/timetable', '/api/campuses', '/api/buildings', '/api/halls'],
-  student: ['/api/student', '/api/timetable', '/api/campuses', '/api/buildings', '/api/halls'],
+  staff: ['/api/staff', '/api/timetable', '/api/campuses', '/api/buildings', '/api/halls', '/api/users'],
+  student: ['/api/student', '/api/timetable', '/api/campuses', '/api/buildings', '/api/halls', '/api/users'],
 };
 
 export function proxy(request: NextRequest) {

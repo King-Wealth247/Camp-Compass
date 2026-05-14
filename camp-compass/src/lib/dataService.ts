@@ -197,7 +197,7 @@ export class DataService {
     return apiClient.get<Building>(`/api/buildings/${id}`);
   }
 
-  async createBuilding(data: Omit<Building, 'id' | 'createdAt' | 'campus' | 'code'>): Promise<ApiResponse<Building>> {
+  async createBuilding(data: Omit<Building, 'id' | 'createdAt' | 'campus'>): Promise<ApiResponse<Building>> {
     return apiClient.post<Building>('/api/buildings', data);
   }
 
@@ -263,10 +263,10 @@ export class DataService {
   }
 
   async generateTimetable(params: {
-    campusId: string;
-    startDate: string;
-    endDate: string;
-  }): Promise<ApiResponse<{ jobId: string; message: string }>> {
+    campusId?: string;
+    startDate?: string;
+    endDate?: string;
+  }): Promise<ApiResponse<{ jobId: string; message: string; generated?: Timetable[] }>> {
     return apiClient.post('/api/timetable/generate', params);
   }
 }

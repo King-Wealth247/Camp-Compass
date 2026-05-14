@@ -7,10 +7,11 @@ function isAdmin(req: NextRequest) {
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const campus = await prisma.campus.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: {
       institution: true,
       buildings: true,
@@ -26,8 +27,9 @@ export async function GET(
 
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   if (!isAdmin(req)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
@@ -35,7 +37,7 @@ export async function PUT(
   const body = await req.json();
 
   const campus = await prisma.campus.update({
-    where: { id: params.id },
+    where: { id },
     data: {
       name: body.name,
       city: body.city,
@@ -51,12 +53,13 @@ export async function PUT(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   if (!isAdmin(req)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  await prisma.campus.delete({ where: { id: params.id } });
+  await prisma.campus.delete({ where: { id } });
   return NextResponse.json({ message: 'Campus deleted successfully' });
 }

@@ -3,10 +3,11 @@ import { prisma } from '@/lib/prisma';
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const course = await prisma.course.findUnique({
-    where: { id: params.id },
+    where: { id },
   });
 
   if (!course) {
@@ -18,12 +19,13 @@ export async function GET(
 
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const body = await req.json();
 
   const course = await prisma.course.update({
-    where: { id: params.id },
+    where: { id },
     data: {
       code: body.code,
       title: body.title,
@@ -38,8 +40,9 @@ export async function PUT(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  await prisma.course.delete({ where: { id: params.id } });
+  const { id } = await params;
+  await prisma.course.delete({ where: { id } });
   return NextResponse.json({ message: 'Course deleted successfully' });
 }

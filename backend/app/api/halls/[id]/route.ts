@@ -3,10 +3,11 @@ import { prisma } from '@/lib/prisma';
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const hall = await prisma.hall.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: {
       building: {
         include: {
@@ -25,12 +26,13 @@ export async function GET(
 
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const body = await req.json();
 
   const updatedHall = await prisma.hall.update({
-    where: { id: params.id },
+    where: { id },
     data: {
       name: body.name,
       capacity: body.capacity,
@@ -51,8 +53,9 @@ export async function PUT(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  await prisma.hall.delete({ where: { id: params.id } });
+  const { id } = await params;
+  await prisma.hall.delete({ where: { id } });
   return NextResponse.json({ message: 'Hall deleted successfully' });
 }

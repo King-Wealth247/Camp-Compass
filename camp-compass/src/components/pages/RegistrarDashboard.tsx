@@ -64,7 +64,7 @@ export function RegistrarDashboard() {
     }
 
     if (response.data) {
-      setUsers((current) => [response.data, ...current]);
+      setUsers((current) => [response.data as User, ...current]);
       setFormState(initialForm);
       setShowNewUserForm(false);
     }

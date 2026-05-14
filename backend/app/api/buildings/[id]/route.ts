@@ -7,10 +7,11 @@ function isAdmin(req: NextRequest) {
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const building = await prisma.building.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: {
       campus: true,
       halls: true,
@@ -26,15 +27,16 @@ export async function GET(
 
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   if (!isAdmin(req)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
   const body = await req.json();
   const building = await prisma.building.update({
-    where: { id: params.id },
+    where: { id },
     data: {
       name: body.name,
       code: body.code,
@@ -53,12 +55,13 @@ export async function PUT(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   if (!isAdmin(req)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  await prisma.building.delete({ where: { id: params.id } });
+  await prisma.building.delete({ where: { id } });
   return NextResponse.json({ message: 'Building deleted successfully' });
 }

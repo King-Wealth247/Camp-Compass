@@ -1,9 +1,13 @@
+import { useState } from "react";
 import { useAuth } from "@/app/context/AuthContext";
 import { Calendar, Building2, Users, AlertTriangle } from "lucide-react";
 import { halls, timetableData } from "@/app/data/mockData";
+import { dataService } from "@/lib/dataService";
 
 export function AdminDashboard() {
   const { user } = useAuth();
+  const [generationStatus, setGenerationStatus] = useState<string | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   if (!user) return null;
 
@@ -103,7 +107,26 @@ export function AdminDashboard() {
             <h2 className="text-xl font-bold text-gray-900">Management Tools</h2>
           </div>
           <div className="p-6 space-y-3">
-            <button className="w-full flex items-center justify-between p-4 bg-blue-50 rounded-lg hover:bg-blue-100 transition text-left">
+            <button
+              disabled={isGenerating}
+              onClick={async () => {
+                setIsGenerating(true);
+                setGenerationStatus(null);
+                try {
+                  const response = await dataService.generateTimetable({ startDate: new Date().toISOString().slice(0, 10) });
+                  if (response.data) {
+                    setGenerationStatus(response.data.message);
+                  } else {
+                    setGenerationStatus('Timetable generation completed, but no response was returned.');
+                  }
+                } catch (error) {
+                  setGenerationStatus('Failed to generate timetable. Please try again.');
+                } finally {
+                  setIsGenerating(false);
+                }
+              }}
+              className="w-full flex items-center justify-between p-4 bg-blue-50 rounded-lg hover:bg-blue-100 transition text-left disabled:opacity-60 disabled:cursor-not-allowed"
+            >
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
                   <Calendar className="w-5 h-5 text-white" />
@@ -115,7 +138,15 @@ export function AdminDashboard() {
                   <p className="text-sm text-gray-600">Create next week's schedule</p>
                 </div>
               </div>
+              <span className="text-sm text-gray-700">
+                {isGenerating ? 'Generating...' : 'Run'}
+              </span>
             </button>
+            {generationStatus ? (
+              <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900">
+                {generationStatus}
+              </div>
+            ) : null}
 
             <a
               href="/dashboard/halls"

@@ -68,6 +68,13 @@ export function CampusMapPage() {
     latitude: "",
     longitude: "",
   });
+  const [buildingForm, setBuildingForm] = useState({
+    name: "",
+    code: "",
+    floors: 1,
+    latitude: "",
+    longitude: "",
+  });
   const [hallSearchQuery, setHallSearchQuery] = useState("");
   const [mapError, setMapError] = useState<string | null>(null);
   const [mapLoading, setMapLoading] = useState(false);
@@ -203,7 +210,7 @@ export function CampusMapPage() {
             });
 
             marker.addListener('click', () => {
-              setSelectedBuilding(building.id);
+              setSelectedBuildingId(building.id);
             });
 
             markers.current.push(marker);
@@ -241,7 +248,7 @@ export function CampusMapPage() {
     });
 
     if (result.data) {
-      setCampuses((current) => [...current, result.data]);
+      setCampuses((current) => [...current, result.data as Campus]);
       setSelectedCampusId(result.data.id);
       setCampusForm({ name: '', city: '', region: '', latitude: '', longitude: '' });
       setCreatingCampus(false);
@@ -284,7 +291,7 @@ export function CampusMapPage() {
     });
 
     if (result.data) {
-      setBuildings((current) => [...current, result.data]);
+      setBuildings((current) => [...current, result.data as Building]);
       setBuildingForm({ name: '', code: '', floors: 1, latitude: '', longitude: '' });
       setCreatingBuilding(false);
     }
@@ -305,7 +312,7 @@ export function CampusMapPage() {
     });
 
     if (result.data) {
-      setBuildings((current) => current.map((building) => (building.id === result.data?.id ? result.data : building)));
+      setBuildings((current) => current.map((building) => (building.id === result.data?.id ? (result.data as Building) : building)));
       setEditingBuilding(false);
       setSelectedBuildingId(result.data.id);
     }
@@ -788,7 +795,7 @@ export function CampusMapPage() {
                     </button>
                     <button
                       onClick={() => {
-                        setSelectedBuilding(null);
+                        setSelectedBuildingId(null);
                         setEditingBuilding(false);
                       }}
                       className="text-sm text-gray-500 hover:text-gray-700"
