@@ -27,7 +27,7 @@ export default function LoginPage() {
         setError('Invalid email or password');
       }
     } catch (err) {
-      setError('Login failed. Please try again.');
+      setError(err instanceof Error ? err.message : 'Login failed. Please try again.');
     } finally {
       setLoading(false);
     }

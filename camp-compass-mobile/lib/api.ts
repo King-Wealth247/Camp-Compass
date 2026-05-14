@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from 'expo-constants';
 
 export interface ApiError {
   error: string;
@@ -23,7 +24,7 @@ export class ApiClient {
   private baseUrl: string;
   private token: string | null = null;
 
-  constructor(baseUrl: string = 'http://localhost:3001') {
+  constructor(baseUrl: string = Constants.expoConfig?.extra?.apiUrl ?? 'http://localhost:3001') {
     this.baseUrl = baseUrl;
     this.initToken();
   }
