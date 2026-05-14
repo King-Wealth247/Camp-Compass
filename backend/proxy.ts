@@ -12,7 +12,7 @@ const roleBasedRoutes: Record<string, string[]> = {
   student: ['/api/student', '/api/timetable', '/api/campuses', '/api/buildings', '/api/halls'],
 };
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
   // Allow public routes

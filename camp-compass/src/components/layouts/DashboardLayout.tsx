@@ -63,7 +63,8 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
     if (user.role === "student" && user.tuitionPaid) {
       baseItems.push(
         { icon: Calendar, label: "My Timetable", path: "/dashboard/timetable" },
-        { icon: Bell, label: "Notifications", path: "/dashboard/notifications" }
+        { icon: Bell, label: "Notifications", path: "/dashboard/notifications" },
+        { icon: Settings, label: "Profile", path: "/dashboard/profile" }
       );
     }
 
@@ -71,7 +72,8 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
       baseItems.push(
         { icon: Calendar, label: "My Schedule", path: "/dashboard/timetable" },
         { icon: Clock, label: "Availability", path: "/dashboard/availability" },
-        { icon: Bell, label: "Notifications", path: "/dashboard/notifications" }
+        { icon: Bell, label: "Notifications", path: "/dashboard/notifications" },
+        { icon: Settings, label: "Profile", path: "/dashboard/profile" }
       );
     }
 
@@ -80,14 +82,16 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
         { icon: Calendar, label: "Timetables", path: "/dashboard/timetable" },
         { icon: Building2, label: "Hall Search", path: "/dashboard/halls" },
         { icon: Clock, label: "Availability", path: "/dashboard/availability" },
-        { icon: Bell, label: "Notifications", path: "/dashboard/notifications" }
+        { icon: Bell, label: "Notifications", path: "/dashboard/notifications" },
+        { icon: Settings, label: "Profile", path: "/dashboard/profile" }
       );
     }
 
     if (user.role === "registrar") {
       baseItems.push(
         { icon: Users, label: "User Management", path: "/dashboard/registrar" },
-        { icon: Settings, label: "Settings", path: "/dashboard/registrar" }
+        { icon: Settings, label: "Settings", path: "/dashboard/registrar" },
+        { icon: Settings, label: "Profile", path: "/dashboard/profile" }
       );
     }
 

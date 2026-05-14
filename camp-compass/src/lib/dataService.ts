@@ -218,6 +218,10 @@ export class DataService {
     return apiClient.get<User>(`/api/users/${id}`);
   }
 
+  async getCurrentUserProfile(): Promise<ApiResponse<User>> {
+    return apiClient.get<User>('/api/auth/me');
+  }
+
   async createUser(data: Omit<User, 'id' | 'createdAt'> & { password: string }): Promise<ApiResponse<User>> {
     return apiClient.post<User>('/api/users', data);
   }
