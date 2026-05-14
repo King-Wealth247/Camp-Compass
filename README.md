@@ -1,114 +1,420 @@
-# Camp-Compass Mobile 🎓📱
+# Camp-Compass 🎓📱
 
-**Camp-Compass** is a comprehensive, native mobile application for university campus management. It provides role-based interactive dashboards for **Students**, **Staff**, **Admins**, and **Registrars** to manage timetables, interactive campus maps, classroom availability, and real-time notifications.
+**Camp-Compass** is a comprehensive, multi-platform campus management system for university administration. It provides role-based interactive dashboards for **Students**, **Staff**, **Admins**, and **Registrars** to manage timetables, interactive campus maps, classroom availability, and real-time notifications.
 
-*(Note: This project was originally built on Next.js but has been completely ported to a high-performance **React Native (Expo)** mobile application.)*
+**Project Status:** Phase 1 Infrastructure Complete (v0.0.1 - Early Development)
+**Last Updated:** May 11, 2026
+
+---
+
+## � Overview
+
+Camp-Compass is a full-stack application consisting of:
+- **Backend:** Next.js REST API with PostgreSQL, Prisma ORM, JWT authentication, and RBAC
+- **Web Frontend:** React + Next.js with Tailwind CSS for desktop/tablet users
+- **Mobile Frontend:** React Native (Expo) for iOS and Android users
+
+All platforms share common authentication, user management, and API integration patterns.
 
 ---
 
 ## 🚀 Features
 
-- **Role-based Authentication:** Secure portal access with tailored views depending on if you are a student, staff member, admin, or registrar.
-- **Smart Timetables:** Automated scheduling and live updates for both students and lecturers.
-- **Interactive Campus Maps:** Navigate indoor and outdoor spaces, view building floor plans, and locate specific lecture halls.
-- **Availability Matrix:** Intuitive touch interfaces for staff members to declare their weekly availability and report constraints.
-- **Real-time Notifications:** In-app alert system for timetable changes, system updates, and urgent messages.
-- **Management Portals:** Complete user registration workflows and administrative oversight modules.
+- **Role-based Authentication:** Secure portal access with tailored views for Student, Staff, Admin, or Registrar roles
+- **Smart Timetables:** Automated scheduling and live updates for students and lecturers
+- **Interactive Campus Maps:** Navigate indoor and outdoor spaces, view building floor plans, locate lecture halls
+- **Classroom Availability:** Real-time availability matrix for staff and resource planning
+- **Real-time Notifications:** In-app alert system for timetable changes, system updates, and urgent messages
+- **Management Portals:** User registration, profile management, and administrative oversight
+- **Multi-Platform Support:** Works seamlessly on web browsers, iOS, and Android devices
 
 ---
 
-## 🛠️ Tech Stack & Key Dependencies
+## 🛠️ Tech Stack
 
-This project leverages the modern React Native ecosystem:
+### Backend (`/backend`)
+- **[Next.js 16](https://nextjs.org/)** — Full-stack JavaScript framework with API routes
+- **[Prisma 5.5](https://www.prisma.io/)** — Modern ORM for database access and migrations
+- **[PostgreSQL 14+](https://www.postgresql.org/)** — Production database
+- **[bcryptjs](https://github.com/dcodeIO/bcrypt.js)** — Password hashing library
+- **[jsonwebtoken](https://github.com/auth0/node-jsonwebtoken)** — JWT token generation and validation
+- **[TypeScript 5.5](https://www.typescriptlang.org/)** — Type-safe JavaScript development
 
-- **[React Native](https://reactnative.dev/) (v0.81.5)** — Core mobile framework for native iOS and Android components.
-- **[Expo](https://expo.dev/) (SDK 54 / ~54.0.33)** — High-level toolchain for rapid React Native development.
-- **[Expo Router](https://docs.expo.dev/router/introduction/) (~6.0.23)** — File-based routing for React Native, bringing the simplicity of web routing to mobile.
-- **[React Native AsyncStorage](https://react-native-async-storage.github.io/async-storage/)** — Persistent offline storage used for session and state management.
-- **[Lucide React Native](https://lucide.dev/)** — Beautiful, consistent iconography.
-- **[Reanimated](https://docs.swmansion.com/react-native-reanimated/) & [Gesture Handler](https://docs.swmansion.com/react-native-gesture-handler/)** — Fluid animations and gesture-based interactions.
+### Web Frontend (`/camp-compass`)
+- **[React 19](https://react.dev/)** — Modern React with hooks
+- **[Next.js 16](https://nextjs.org/)** — React framework with file-based routing
+- **[Tailwind CSS 4](https://tailwindcss.com/)** — Utility-first CSS framework
+- **[Radix UI](https://www.radix-ui.com/)** — Headless UI components
+- **[TypeScript 5.5](https://www.typescriptlang.org/)** — Type-safe frontend development
 
-*Styling logic relies entirely on ultra-fast React Native `StyleSheet` objects, ensuring zero dependency bloat and high rendering speeds.*
+### Mobile Frontend (`/camp-compass-mobile`)
+- **[React Native 0.81](https://reactnative.dev/)** — Cross-platform mobile framework
+- **[Expo 54](https://expo.dev/)** — Managed React Native development platform
+- **[Expo Router 6](https://docs.expo.dev/router/)** — File-based routing for React Native
+- **[React Native AsyncStorage](https://react-native-async-storage.github.io/async-storage/)** — Local persistence
+- **[Lucide React Native](https://lucide.dev/)** — Cross-platform icons
+- **[TypeScript 5.9](https://www.typescriptlang.org/)** — Type-safe mobile development
 
 ---
 
-## 🚦 Getting Started
+## � Getting Started for Team Members
 
-### 1. Prerequisites
-- **Node.js** v18+ 
-- **npm** (comes with Node)
-- **Expo Go** application installed on your physical mobile device (available on iOS and Android app stores).
+### Phase 1: Prerequisites (Same for all team members)
 
-### 2. Clone the repository
+#### System Requirements
+- **Node.js** v18 or higher (verify with `node --version`)
+- **npm** v8+ (comes with Node.js)
+- **Git** for version control
+- **PostgreSQL 14+** (for backend local development)
 
+#### Optional (for mobile development)
+- **Expo Go** app on iOS/Android (for testing mobile without emulator)
+- **Android Studio** (if you want to run Android emulator)
+- **Xcode** (macOS only, for iOS development)
+
+### Phase 2: Initial Setup (Follow Once)
+
+#### Step 1: Clone the Repository
 ```bash
 git clone https://github.com/King-Wealth247/Camp-Compass.git
-cd Camp-Compass/camp-compass-mobile
+cd Camp-Compass
 ```
 
-### 3. Install Dependencies
+#### Step 2: Database Setup (Backend Development Only)
 
-To ensure maximum compatibility with the installed Expo SDK, always use the `--legacy-peer-deps` flag:
+**Install PostgreSQL** (if not already installed):
+- **Windows**: Download from https://www.postgresql.org/download/windows/
+- **macOS**: `brew install postgresql@14`
+- **Linux**: `sudo apt-get install postgresql postgresql-contrib`
 
+**Create a local database**:
 ```bash
+psql -U postgres
+CREATE DATABASE camp_compass_dev;
+\q
+```
+
+**Create `.env.local` in `/backend` folder**:
+```bash
+cd backend
+touch .env.local  # or create manually if on Windows
+```
+
+Add the following environment variables:
+```env
+# Database
+DATABASE_URL="postgresql://postgres:your_password@localhost:5432/camp_compass_dev"
+
+# JWT Secret
+JWT_SECRET="your-super-secret-jwt-key-change-this-in-production"
+
+# Environment
+NODE_ENV=development
+PORT=3001
+```
+
+**Note:** Replace `your_password` with your PostgreSQL password set during installation.
+
+#### Step 3: Install Dependencies
+
+**Backend Setup**:
+```bash
+cd backend
+npm install
+npx prisma migrate dev --name init  # Create database schema
+npm run dev  # Start backend on http://localhost:3001
+```
+
+**Web Frontend Setup** (in a new terminal):
+```bash
+cd camp-compass
 npm install --legacy-peer-deps
+npm run dev  # Start on http://localhost:3000
 ```
 
-### 4. Run the Development Server
-
-Start the local Metro Bundler server. It's recommended to clear the cache on the first run to prevent any stale bundles:
-
+**Mobile Frontend Setup** (in a new terminal):
 ```bash
-npm start --clear
+cd camp-compass-mobile
+npm install --legacy-peer-deps
+npm start  # Scan QR code with Expo Go or press 'i'/'a'/'w' for iOS/Android/Web
 ```
 
-### 5. View the App
-- **Physical Device:** Open the Expo Go app on your phone and scan the QR code displayed in your terminal.
-- **Simulation:** Press `i` in the terminal to launch the iOS Simulator (macOS only) or `a` to launch the Android Emulator (requires Android Studio).
-- **Web Browser:** If you don't have a mobile device, press `w` in the terminal. Expo will prompt you to install web dependencies (`react-native-web`, `react-dom`, `@expo/metro-runtime`) and then open the app in your local browser.
+### Phase 3: Verify Installation
+
+✅ **Backend Check**: Visit `http://localhost:3001/api/health` — should return status 200
+✅ **Web Check**: Visit `http://localhost:3000` — should load the web app
+✅ **Mobile Check**: Scan QR code or use emulator — mobile app should launch
+
+### Common Issues & Solutions
+
+**Issue**: `npm install` fails with peer dependency errors
+- **Solution**: Use `npm install --legacy-peer-deps` for web and mobile projects
+
+**Issue**: PostgreSQL connection error
+- **Solution**: Verify DATABASE_URL in `.env.local`, ensure PostgreSQL service is running
+
+**Issue**: Port 3000 or 3001 already in use
+- **Solution**: Change PORT in `.env.local` or kill the process using that port
+
+**Issue**: `prisma migrate` fails
+- **Solution**: Ensure database exists and DATABASE_URL is correct, then run `npx prisma db push`
 
 ---
 
-## 📁 Project Structure
+## 🔄 Development Workflow
 
-```text
-camp-compass-mobile/
-├── app/                  # File-based routing via Expo Router
-│   ├── (app)/            # Authenticated route group
-│   │   ├── admin/        # Admin dashboard, map, and tools
-│   │   ├── registrar/    # User registration pages
-│   │   ├── staff/        # Staff schedule & availability
-│   │   └── student/      # Student timetable & campus map
-│   ├── index.tsx         # Entry point (handles Auth redirect)
-│   ├── login.tsx         # Login authentication screen
-│   └── _layout.tsx       # Root layout wrapping the AuthProvider
-├── components/           # Reusable global UI components (AppShell, StatCard)
-├── context/              # Context Providers (AuthContext using AsyncStorage)
-├── data/                 # Mock database content (Campuses, Timetables, Users)
-└── screens/              # Core UI screen components shared across various roles
+### Day-to-Day Development
+
+1. **Start Backend** (Terminal 1):
+   ```bash
+   cd backend
+   npm run dev  # Runs on http://localhost:3001
+   ```
+
+2. **Start Web Frontend** (Terminal 2):
+   ```bash
+   cd camp-compass
+   npm run dev  # Runs on http://localhost:3000
+   ```
+
+3. **Start Mobile Frontend** (Terminal 3):
+   ```bash
+   cd camp-compass-mobile
+   npm start  # Scan QR or select platform
+   ```
+
+### Making Database Changes
+
+When you modify `backend/prisma/schema.prisma`:
+```bash
+cd backend
+npx prisma migrate dev --name "describe_your_change"
+```
+
+This creates a migration file and updates the database.
+
+### Adding New API Endpoints
+
+1. Create file in `backend/app/api/[feature]/route.ts`
+2. Export functions: `export async function GET() {}` or `POST`, `PUT`, `DELETE`
+3. Import and use Prisma client from `backend/lib/prisma.ts`
+4. Apply RBAC with middleware from `backend/lib/rbac.ts`
+
+Example:
+```typescript
+// backend/app/api/example/route.ts
+import { NextRequest, NextResponse } from 'next/server';
+import { requireAuth } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
+
+export async function GET(req: NextRequest) {
+  const user = await requireAuth(req, ['ADMIN']);  // Require ADMIN role
+  const data = await prisma.example.findMany();
+  return NextResponse.json(data);
+}
+```
+
+### Using API Client in Frontend
+
+**Web (React)**:
+```typescript
+import { api } from '@/lib/api';
+
+const response = await api.get('/auth/me');  // Automatically includes auth header
+```
+
+**Mobile (React Native)**:
+```typescript
+import { api } from '@/lib/api';
+
+const response = await api.get('/auth/me');  // Same pattern
 ```
 
 ---
 
-## 🤝 How to Contribute
+## � Project Structure
 
-We welcome contributions to Camp-Compass! Follow these steps to contribute:
+```
+Camp-Compass/
+├── backend/                          # Next.js Backend API Server
+│   ├── app/
+│   │   ├── api/
+│   │   │   ├── auth/                # Authentication endpoints
+│   │   │   │   ├── login/           # POST /api/auth/login
+│   │   │   │   ├── register/        # POST /api/auth/register
+│   │   │   │   └── me/              # GET /api/auth/me (verify token)
+│   │   │   ├── campuses/            # Campus management endpoints
+│   │   │   ├── courses/             # Course management endpoints
+│   │   │   ├── halls/               # Hall/classroom management endpoints
+│   │   │   ├── timetable/           # Timetable generation and retrieval
+│   │   │   ├── users/               # User management endpoints
+│   │   │   └── health/              # Health check endpoint
+│   │   └── page.tsx                 # Backend info page
+│   ├── lib/
+│   │   ├── auth.ts                  # Authentication utilities
+│   │   ├── prisma.ts                # Prisma client singleton
+│   │   ├── rbac.ts                  # Role-based access control middleware
+│   │   └── session.ts               # Session and JWT token management
+│   ├── middleware.ts                # Next.js middleware for auth checks
+│   ├── prisma/
+│   │   ├── schema.prisma            # Database schema definition
+│   │   └── migrations/              # Database migration files
+│   ├── package.json
+│   ├── tsconfig.json
+│   └── .env.example                 # Environment variables template
+│
+├── camp-compass/                    # React + Next.js Web Frontend
+│   ├── src/
+│   │   ├── app/
+│   │   │   ├── page.tsx             # Home page
+│   │   │   ├── layout.tsx           # Root layout
+│   │   │   ├── context/
+│   │   │   │   └── AuthContext.tsx  # Global auth state management
+│   │   │   ├── dashboard/           # Role-based dashboards
+│   │   │   │   ├── admin/
+│   │   │   │   ├── registrar/
+│   │   │   │   ├── staff/
+│   │   │   │   └── student/
+│   │   │   └── components/
+│   │   │       ├── ui/              # Reusable UI components
+│   │   │       └── pages/           # Page-specific components
+│   │   ├── lib/
+│   │   │   ├── api.ts               # API client with auth handling
+│   │   │   ├── authService.ts       # Authentication service methods
+│   │   │   └── dataService.ts       # Data fetching service methods
+│   │   └── styles/                  # Global styles and theme
+│   ├── package.json
+│   ├── tsconfig.json
+│   └── next.config.ts
+│
+├── camp-compass-mobile/             # React Native Expo Mobile App
+│   ├── app/
+│   │   ├── _layout.tsx              # Root layout with AuthProvider
+│   │   ├── index.tsx                # Entry point (auth redirect)
+│   │   ├── login.tsx                # Login screen
+│   │   └── (app)/                   # Authenticated route group
+│   │       ├── _layout.tsx
+│   │       ├── admin/               # Admin role screens
+│   │       ├── registrar/           # Registrar role screens
+│   │       ├── staff/               # Staff role screens
+│   │       └── student/             # Student role screens
+│   ├── components/                  # Reusable mobile UI components
+│   ├── context/                     # Context providers
+│   │   └── AuthContext.tsx          # Mobile auth state
+│   ├── screens/                     # Feature screens
+│   ├── lib/
+│   │   ├── api.ts                   # API client for mobile
+│   │   ├── authService.ts           # Mobile-specific auth methods
+│   │   └── dataService.ts           # Mobile data fetching
+│   ├── package.json
+│   ├── tsconfig.json
+│   └── app.json                     # Expo configuration
+│
+├── BACKEND_SETUP_GUIDE.md          # Detailed backend setup instructions
+├── PROJECT_STATUS.md               # Detailed project status and progress
+├── IMPLEMENTATION_TRACKER.md       # Feature implementation matrix
+└── README.md                        # This file
+```
 
-1. **Fork the Repository** on GitHub.
-2. **Create a Feature Branch:** Let's keep things organized. 
-   ```bash
-   git checkout -b feature/amazing-new-feature
-   ```
-3. **Write Code**: Ensure you use `StyleSheet.create` for styling and test your changes on both iOS and Android if possible. 
-4. **Commit your changes:** Follow standard conventional commit formats.
-   ```bash
-   git commit -m 'feat: added amazing new campus mapping algorithm'
-   ```
-5. **Push to the Branch:**
-   ```bash
-   git push origin feature/amazing-new-feature
-   ```
-6. **Open a Pull Request:** Submit your PR against the `main` branch. Provide a clear description and screenshot/video of your changes!
+---
+
+## 📝 Recent Changes (Blue Branch - May 2026)
+
+### Commit History
+This release includes three major commits that establish the Phase 1 infrastructure:
+
+#### 1. **feat: refactor code structure for improved readability and maintainability** (a362109)
+- Reorganized frontend code for better modularity
+- Improved component organization and naming conventions
+- Enhanced code structure across web and mobile platforms
+
+#### 2. **feat: Add project status report and initial backend infrastructure** (dee3fa0)
+**New Files & Major Changes:**
+- ✅ Created **Next.js backend** in `/backend` folder with complete API structure
+- ✅ Implemented **authentication system**: JWT tokens, bcrypt password hashing, role-based access control
+- ✅ Setup **PostgreSQL database** with Prisma ORM and initial schema
+- ✅ Created API endpoints:
+  - `POST /api/auth/login` — User authentication with JWT token generation
+  - `POST /api/auth/register` — New user registration with role assignment
+  - `GET /api/auth/me` — Token verification and current user info
+  - `GET /api/health` — Server health check
+  - `GET /api/halls` — Retrieve classroom/hall data
+  - Additional CRUD endpoints for campuses, courses, timetables, users
+- ✅ Implemented **RBAC middleware** in `backend/lib/rbac.ts` for role-based access enforcement
+- ✅ Created **API clients** for both web and mobile:
+  - `camp-compass/src/lib/api.ts` — Web API client with error handling
+  - `camp-compass-mobile/lib/api.ts` — Mobile API client with persistence
+  - `camp-compass/src/lib/authService.ts` & `camp-compass-mobile/lib/authService.ts` — Authentication service methods
+  - `camp-compass/src/lib/dataService.ts` & `camp-compass-mobile/lib/dataService.ts` — Data fetching methods
+
+**New Database Schema:**
+- `User` model with roles (STUDENT, STAFF, ADMIN, REGISTRAR)
+- `Campus` model for university locations
+- `Hall` model for classrooms and lecture halls
+- `Course` model for academic courses
+- `Timetable` model for class schedules
+- Support for relationships and cascading deletes
+
+#### 3. **feat: Add backend setup guide and project status report documentation** (63262ce)
+**Documentation Files:**
+- ✅ `BACKEND_SETUP_GUIDE.md` — Step-by-step backend setup instructions
+- ✅ `PROJECT_STATUS.md` — Comprehensive project status report with completed/planned features
+- ✅ `IMPLEMENTATION_TRACKER.md` — Feature implementation matrix for quick reference
+
+**Additional Files:**
+- ✅ `backend/.env.example` — Template for environment variables
+- ✅ `backend/.gitignore` — Git ignore rules for backend
+- ✅ Updated migration files with complete database schema
+
+---
+
+## 🤝 Contribution Guidelines
+
+### Creating Feature Branches
+```bash
+git checkout -b feature/my-feature-name
+# or for bug fixes
+git checkout -b fix/bug-description
+```
+
+### Commit Message Format
+Follow conventional commits:
+```bash
+git commit -m "feat: add user profile page"
+git commit -m "fix: correct authentication token expiry"
+git commit -m "refactor: reorganize database schema"
+```
+
+### Before Pushing
+1. Ensure all tests pass and code builds
+2. Verify changes work on your platform (web/mobile)
+3. Update relevant documentation if needed
+4. Create a pull request with clear description
+
+### Pull Request Process
+1. Push your branch to GitHub
+2. Create PR against `main` branch
+3. Include description of changes and motivation
+4. Request review from team lead
+5. Address feedback and rebase if needed
+
+---
+
+## 📚 Additional Documentation
+
+- **[BACKEND_SETUP_GUIDE.md](./BACKEND_SETUP_GUIDE.md)** — Detailed backend infrastructure setup
+- **[PROJECT_STATUS.md](./PROJECT_STATUS.md)** — Comprehensive project progress report
+- **[IMPLEMENTATION_TRACKER.md](./IMPLEMENTATION_TRACKER.md)** — Quick reference for feature status
+
+---
+
+## 📞 Support & Questions
+
+For questions or issues:
+1. Check existing documentation files first
+2. Review git commit history for context
+3. Check issue tracker on GitHub
+4. Contact project lead for blockers
 
 ---
 
