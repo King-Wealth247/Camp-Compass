@@ -23,8 +23,6 @@ export default function LoginPage() {
       const user = await login(email.trim(), password);
       if (user) {
         router.replace(`/(app)/${user.role}/dashboard` as any);
-      } else {
-        setError('Invalid email or password');
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed. Please try again.');

@@ -68,10 +68,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await AsyncStorage.setItem('cc_user', JSON.stringify(userData));
         return userData;
       }
+      
+      if (response.error) {
+        throw new Error(response.error.error || 'Authentication failed');
+      }
       return null;
     } catch (error) {
       console.error("Login error:", error);
-      return null;
+      throw error;
     }
   };
 

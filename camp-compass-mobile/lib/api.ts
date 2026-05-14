@@ -24,7 +24,7 @@ export class ApiClient {
   private baseUrl: string;
   private token: string | null = null;
 
-  constructor(baseUrl: string = Constants.expoConfig?.extra?.apiUrl ?? 'http://localhost:3001') {
+  constructor(baseUrl: string = process.env.EXPO_PUBLIC_API_URL || Constants.expoConfig?.extra?.apiUrl || 'http://localhost:3001') {
     this.baseUrl = baseUrl;
     this.initToken();
   }
