@@ -2,31 +2,24 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-const TIME_SLOTS = [
-  '08:00',
-  '09:00',
-  '10:00',
-  '11:00',
-  '12:00',
-  '13:00',
-  '14:00',
-  '15:00',
-  '16:00',
-];
 
-function getWeekStartDate(startDate?: string) {
+// Map a time range string to allowed start hours
+function allowedHours(timeRange: string | null | undefined): number[] {
+  if (!timeRange) return [8, 9, 10, 11, 13, 14, 15, 16]; // default: full day
+  if (timeRange === '08:00-12:00') return [8, 9, 10, 11];
+  if (timeRange === '13:00-17:00') return [13, 14, 15, 16];
+  if (timeRange === '08:00-17:00') return [8, 9, 10, 11, 13, 14, 15, 16];
+  return [8, 9, 10, 11, 13, 14, 15, 16];
+}
+
+function getWeekStart(startDate?: string) {
   const date = startDate ? new Date(startDate) : new Date();
   const day = date.getUTCDay();
-  const diff = (day + 6) % 7; // make Monday = 0
+  const diff = (day + 6) % 7;
   const monday = new Date(date);
   monday.setUTCDate(date.getUTCDate() - diff);
   monday.setUTCHours(0, 0, 0, 0);
   return monday;
-}
-
-function formatTimeSlot(slot: string) {
-  const [hour, minute] = slot.split(':').map(Number);
-  return { hour, minute };
 }
 
 export async function POST(req: NextRequest) {
@@ -36,58 +29,79 @@ export async function POST(req: NextRequest) {
 
   const halls = await prisma.hall.findMany({
     where: campusId ? { building: { campusId } } : undefined,
-    include: {
-      building: { include: { campus: true } },
-    },
+    include: { building: { include: { campus: true } } },
   });
 
   const courses = await prisma.course.findMany({
-    orderBy: [
-      { department: 'asc' },
-      { level: 'asc' },
-      { code: 'asc' },
-    ],
+    orderBy: [{ department: 'asc' }, { level: 'asc' }, { code: 'asc' }],
   });
 
   if (courses.length === 0) {
     return NextResponse.json({ jobId: 'none', message: 'No courses found to generate timetable.' });
   }
-
   if (halls.length === 0) {
-    return NextResponse.json({ jobId: 'none', message: 'No halls available to schedule courses.' }, { status: 400 });
+    return NextResponse.json({ jobId: 'none', message: 'No halls available.' }, { status: 400 });
   }
 
-  const baseDate = getWeekStartDate(startDate);
+  // Fetch the most recent availability record per lecturer
+  const allInstructors = [...new Set(courses.map((c) => c.instructor))];
+  const availabilityMap: Record<string, Record<string, number[]>> = {};
+
+  for (const instructorName of allInstructors) {
+    const user = await prisma.user.findFirst({ where: { name: instructorName, role: 'staff' } });
+    if (!user) {
+      // No user found — default to full availability
+      availabilityMap[instructorName] = Object.fromEntries(DAYS.map((d) => [d, allowedHours(null)]));
+      continue;
+    }
+
+    const latest = await prisma.availability.findFirst({
+      where: { lecturerId: user.id },
+      orderBy: { submissionDate: 'desc' },
+    });
+
+    if (!latest) {
+      availabilityMap[instructorName] = Object.fromEntries(DAYS.map((d) => [d, allowedHours(null)]));
+      continue;
+    }
+
+    availabilityMap[instructorName] = {
+      Monday:    latest.monday    ? allowedHours(latest.mondayTime)    : [],
+      Tuesday:   latest.tuesday   ? allowedHours(latest.tuesdayTime)   : [],
+      Wednesday: latest.wednesday ? allowedHours(latest.wednesdayTime) : [],
+      Thursday:  latest.thursday  ? allowedHours(latest.thursdayTime)  : [],
+      Friday:    latest.friday    ? allowedHours(latest.fridayTime)    : [],
+    };
+  }
+
+  const baseDate = getWeekStart(startDate);
   const instructorSchedule = new Map<string, Set<string>>();
   const hallSchedule = new Map<string, Set<string>>();
   const generatedEntries: Array<{
-    campusId: string;
-    courseId: string;
-    hallId: string;
-    startTime: Date;
-    endTime: Date;
-    day: string;
+    campusId: string; courseId: string; hallId: string;
+    startTime: Date; endTime: Date; day: string;
   }> = [];
 
   for (const course of courses) {
     let assigned = false;
+    const instrAvail = availabilityMap[course.instructor] ?? {};
 
-    for (let dayIndex = 0; dayIndex < DAYS.length && !assigned; dayIndex += 1) {
-      for (const slot of TIME_SLOTS) {
-        const slotKey = `${DAYS[dayIndex]}-${slot}`;
+    for (let dayIndex = 0; dayIndex < DAYS.length && !assigned; dayIndex++) {
+      const day = DAYS[dayIndex];
+      const hours = instrAvail[day] ?? [];
+
+      for (const hour of hours) {
+        const slotKey = `${day}-${hour}:00`;
+        const instructorTaken = instructorSchedule.get(course.instructor)?.has(slotKey);
+        if (instructorTaken) continue;
 
         for (const hall of halls) {
-          const hallKey = `${hall.id}-${slotKey}`;
-          const instructorKey = `${course.instructor}-${slotKey}`;
-
           const hallTaken = hallSchedule.get(hall.id)?.has(slotKey);
-          const instructorTaken = instructorSchedule.get(course.instructor)?.has(slotKey);
-          if (hallTaken || instructorTaken) continue;
+          if (hallTaken) continue;
 
-          const { hour, minute } = formatTimeSlot(slot);
           const startTime = new Date(baseDate);
           startTime.setUTCDate(baseDate.getUTCDate() + dayIndex);
-          startTime.setUTCHours(hour, minute, 0, 0);
+          startTime.setUTCHours(hour, 0, 0, 0);
           const endTime = new Date(startTime);
           endTime.setUTCHours(hour + 1);
 
@@ -100,11 +114,12 @@ export async function POST(req: NextRequest) {
             hallId: hall.id,
             startTime,
             endTime,
-            day: DAYS[dayIndex],
+            day,
           });
           assigned = true;
           break;
         }
+        if (assigned) break;
       }
     }
   }
@@ -133,10 +148,9 @@ export async function POST(req: NextRequest) {
     )
   );
 
-  const jobId = `generate-${Date.now()}`;
   return NextResponse.json({
-    jobId,
-    message: `Generated ${created.length} timetable entries using the constraint solver.`,
+    jobId: `generate-${Date.now()}`,
+    message: `Generated ${created.length} timetable entries respecting lecturer availability.`,
     generated: created,
   });
 }

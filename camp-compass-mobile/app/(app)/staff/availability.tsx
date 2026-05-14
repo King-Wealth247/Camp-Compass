@@ -1,291 +1,302 @@
-import { useState } from 'react';
-import { View, Text, TouchableOpacity, TextInput, StyleSheet, ScrollView, Alert } from 'react-native';
+import { useState, useEffect } from 'react';
+import {
+  View, Text, TouchableOpacity, TextInput, StyleSheet,
+  ScrollView, Alert, ActivityIndicator,
+} from 'react-native';
 import { useAuth } from '@/context/AuthContext';
 import { AppShell } from '@/components/AppShell';
-import { CheckCircle, AlertCircle, Send } from 'lucide-react-native';
+import { CheckCircle, AlertCircle, Send, Clock } from 'lucide-react-native';
+import { dataService, AvailabilityPayload, Availability } from '@/lib/dataService';
 
-const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-const TIME_SLOTS = ['08:00-10:00', '10:00-12:00', '12:00-14:00', '14:00-16:00', '16:00-18:00'];
+const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] as const;
+type Day = typeof DAYS[number];
 
-type Availability = Record<string, Record<string, boolean>>;
+const TIME_OPTIONS = ['08:00-12:00', '13:00-17:00', '08:00-17:00'] as const;
+type TimeOption = typeof TIME_OPTIONS[number];
 
-function buildInitial(): Availability {
-  const a: Availability = {};
-  DAYS.forEach((d) => {
-    a[d] = {};
-    TIME_SLOTS.forEach((s) => { a[d][s] = true; });
-  });
-  return a;
+const TIME_LABELS: Record<TimeOption, string> = {
+  '08:00-12:00': '8AM – 12PM',
+  '13:00-17:00': '1PM – 5PM',
+  '08:00-17:00': '8AM – 5PM (Full Day)',
+};
+
+type DayState = { available: boolean; time: TimeOption };
+type WeekState = Record<Day, DayState>;
+
+function buildInitial(): WeekState {
+  return Object.fromEntries(
+    DAYS.map((d) => [d, { available: false, time: '08:00-17:00' as TimeOption }])
+  ) as WeekState;
+}
+
+function isWeekend(): boolean {
+  const day = new Date().getDay(); // 0=Sun, 6=Sat
+  return day === 0 || day === 6;
 }
 
 export default function AvailabilityScreen() {
   const { user } = useAuth();
-  const [availability, setAvailability] = useState<Availability>(buildInitial);
-  const [notes, setNotes] = useState('');
-  const [submitted, setSubmitted] = useState(false);
-  const [selectedDay, setSelectedDay] = useState(DAYS[0]);
+  const [week, setWeek] = useState<WeekState>(buildInitial);
+  const [description, setDescription] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [lastSubmission, setLastSubmission] = useState<Availability | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const isResubmission = !isWeekend();
+
+  useEffect(() => {
+    if (!user) return;
+    // Load the lecturer's most recent availability to pre-fill the form
+    dataService.getAvailabilities(user.id).then((res) => {
+      if (res.data && res.data.length > 0) {
+        const latest = res.data[0];
+        setLastSubmission(latest);
+        setWeek({
+          Monday:    { available: latest.monday,    time: (latest.mondayTime    as TimeOption) || '08:00-17:00' },
+          Tuesday:   { available: latest.tuesday,   time: (latest.tuesdayTime   as TimeOption) || '08:00-17:00' },
+          Wednesday: { available: latest.wednesday, time: (latest.wednesdayTime as TimeOption) || '08:00-17:00' },
+          Thursday:  { available: latest.thursday,  time: (latest.thursdayTime  as TimeOption) || '08:00-17:00' },
+          Friday:    { available: latest.friday,    time: (latest.fridayTime    as TimeOption) || '08:00-17:00' },
+          Saturday:  { available: latest.saturday,  time: (latest.saturdayTime  as TimeOption) || '08:00-17:00' },
+        });
+      }
+      setLoading(false);
+    });
+  }, [user]);
 
   if (!user) return null;
 
-  const toggle = (day: string, slot: string) =>
-    setAvailability((prev) => ({
-      ...prev,
-      [day]: { ...prev[day], [slot]: !prev[day][slot] },
-    }));
+  const toggleDay = (day: Day) =>
+    setWeek((prev) => ({ ...prev, [day]: { ...prev[day], available: !prev[day].available } }));
 
-  const toggleDay = (day: string) => {
-    const allAvail = TIME_SLOTS.every((s) => availability[day][s]);
-    setAvailability((prev) => ({
-      ...prev,
-      [day]: Object.fromEntries(TIME_SLOTS.map((s) => [s, !allAvail])),
-    }));
+  const setTime = (day: Day, time: TimeOption) =>
+    setWeek((prev) => ({ ...prev, [day]: { ...prev[day], time } }));
+
+  const availCount = DAYS.filter((d) => week[d].available).length;
+
+  const handleSubmit = async () => {
+    if (isResubmission && !description.trim()) {
+      Alert.alert('Description required', 'Please explain why you are resubmitting mid-week.');
+      return;
+    }
+
+    setSubmitting(true);
+    const payload: AvailabilityPayload = {
+      lecturerId: user.id,
+      monday:    week.Monday.available,    mondayTime:    week.Monday.available    ? week.Monday.time    : null,
+      tuesday:   week.Tuesday.available,   tuesdayTime:   week.Tuesday.available   ? week.Tuesday.time   : null,
+      wednesday: week.Wednesday.available, wednesdayTime: week.Wednesday.available ? week.Wednesday.time : null,
+      thursday:  week.Thursday.available,  thursdayTime:  week.Thursday.available  ? week.Thursday.time  : null,
+      friday:    week.Friday.available,    fridayTime:    week.Friday.available    ? week.Friday.time    : null,
+      saturday:  week.Saturday.available,  saturdayTime:  week.Saturday.available  ? week.Saturday.time  : null,
+      description: isResubmission ? description.trim() : null,
+    };
+
+    const res = await dataService.submitAvailability(payload);
+    setSubmitting(false);
+
+    if (res.data) {
+      setLastSubmission(res.data);
+      Alert.alert(
+        isResubmission ? 'Resubmission Sent' : 'Availability Submitted',
+        isResubmission
+          ? 'Your resubmission is pending admin review.'
+          : 'Your availability has been saved. Admin has been notified.',
+      );
+      if (isResubmission) setDescription('');
+    } else {
+      Alert.alert('Error', res.error?.error ?? 'Failed to submit. Please try again.');
+    }
   };
 
-  const getAvailCount = () =>
-    DAYS.reduce((acc, d) => acc + TIME_SLOTS.filter((s) => availability[d][s]).length, 0);
-
-  const handleSubmit = () => {
-    setSubmitted(true);
-    setTimeout(() => setSubmitted(false), 3000);
-  };
+  if (loading) {
+    return (
+      <AppShell title="Availability">
+        <ActivityIndicator size="large" color="#2563EB" style={{ marginTop: 40 }} />
+      </AppShell>
+    );
+  }
 
   return (
     <AppShell title="Availability">
       <View style={styles.headerBox}>
         <Text style={styles.pageTitle}>Availability Declaration</Text>
-        <Text style={styles.pageSub}>Week of March 31 – April 4, 2026</Text>
+        <Text style={styles.pageSub}>
+          {isResubmission ? 'Mid-week resubmission — admin review required' : 'Weekend submission — declare your week'}
+        </Text>
       </View>
 
-      {submitted && (
-        <View style={styles.successBox}>
-          <CheckCircle color="#16A34A" size={18} />
-          <Text style={styles.successText}>Availability submitted! Admin has been notified.</Text>
+      {/* Status banner */}
+      {isResubmission ? (
+        <View style={[styles.banner, { backgroundColor: '#FFFBEB', borderColor: '#FDE68A' }]}>
+          <AlertCircle color="#D97706" size={16} />
+          <Text style={[styles.bannerText, { color: '#92400E' }]}>
+            Mid-week resubmission. You must provide a reason. Admin will review before timetables are updated.
+          </Text>
+        </View>
+      ) : (
+        <View style={[styles.banner, { backgroundColor: '#EFF6FF', borderColor: '#BFDBFE' }]}>
+          <Clock color="#2563EB" size={16} />
+          <Text style={[styles.bannerText, { color: '#1D4ED8' }]}>
+            Submit by <Text style={{ fontWeight: '700' }}>Sunday midnight</Text> each week.
+          </Text>
         </View>
       )}
 
-      <View style={styles.infoBox}>
-        <AlertCircle color="#2563EB" size={16} />
-        <Text style={styles.infoText}>Submit by <Text style={{ fontWeight: '700' }}>Friday 5:00 PM</Text> each week.</Text>
-      </View>
-
-      {/* Day Tabs */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.dayScroll}>
-        {DAYS.map((day) => {
-          const availCount = TIME_SLOTS.filter((s) => availability[day][s]).length;
-          const isActive = selectedDay === day;
-          return (
-            <TouchableOpacity
-              key={day}
-              style={[styles.dayTab, isActive && styles.dayTabActive]}
-              onPress={() => setSelectedDay(day)}
-              activeOpacity={0.7}
-            >
-              <Text style={[styles.dayTabText, isActive && styles.dayTabTextActive]}>
-                {day.slice(0, 3)}
-              </Text>
-              <Text style={[styles.dayTabCount, isActive && styles.dayTabCountActive]}>
-                {availCount}/{TIME_SLOTS.length}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
-
-      {/* Slots for selected day */}
-      <View style={styles.card}>
-        <View style={styles.cardHeaderRow}>
-          <Text style={styles.cardTitle}>{selectedDay}</Text>
-          <TouchableOpacity onPress={() => toggleDay(selectedDay)} activeOpacity={0.7}>
-            <Text style={styles.toggleAllText}>
-              {TIME_SLOTS.every((s) => availability[selectedDay][s]) ? 'Mark All Unavailable' : 'Mark All Available'}
-            </Text>
-          </TouchableOpacity>
+      {/* Last submission status */}
+      {lastSubmission?.resubmission === 'unseen' && (
+        <View style={[styles.banner, { backgroundColor: '#FEF3C7', borderColor: '#FCD34D' }]}>
+          <AlertCircle color="#B45309" size={16} />
+          <Text style={[styles.bannerText, { color: '#92400E' }]}>Pending admin review of your last resubmission.</Text>
         </View>
-        {TIME_SLOTS.map((slot) => {
-          const isAvail = availability[selectedDay][slot];
-          return (
-            <TouchableOpacity
-              key={slot}
-              style={[styles.slotRow, { backgroundColor: isAvail ? '#F0FDF4' : '#FEF2F2', borderColor: isAvail ? '#BBF7D0' : '#FECACA' }]}
-              onPress={() => toggle(selectedDay, slot)}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.slotTime}>{slot}</Text>
-              <View style={[styles.slotStatus, { backgroundColor: isAvail ? '#DCFCE7' : '#FEE2E2' }]}>
-                {isAvail ? (
-                  <CheckCircle color="#16A34A" size={18} />
-                ) : (
-                  <Text style={styles.unavailX}>✕</Text>
-                )}
-                <Text style={[styles.slotStatusText, { color: isAvail ? '#16A34A' : '#DC2626' }]}>
-                  {isAvail ? 'Available' : 'Unavailable'}
-                </Text>
+      )}
+      {lastSubmission?.resubmission === 'validated' && (
+        <View style={[styles.banner, { backgroundColor: '#F0FDF4', borderColor: '#BBF7D0' }]}>
+          <CheckCircle color="#16A34A" size={16} />
+          <Text style={[styles.bannerText, { color: '#15803D' }]}>Your last resubmission was validated. Timetable updated.</Text>
+        </View>
+      )}
+      {lastSubmission?.resubmission === 'rejected' && (
+        <View style={[styles.banner, { backgroundColor: '#FEF2F2', borderColor: '#FECACA' }]}>
+          <AlertCircle color="#DC2626" size={16} />
+          <Text style={[styles.bannerText, { color: '#B91C1C' }]}>Your last resubmission was rejected. Original schedule stands.</Text>
+        </View>
+      )}
+
+      {/* Day cards */}
+      {DAYS.map((day) => {
+        const state = week[day];
+        return (
+          <View key={day} style={[styles.dayCard, state.available && styles.dayCardActive]}>
+            <TouchableOpacity style={styles.dayHeader} onPress={() => toggleDay(day)} activeOpacity={0.7}>
+              <View style={[styles.checkbox, state.available && styles.checkboxChecked]}>
+                {state.available && <CheckCircle color="#fff" size={14} />}
               </View>
+              <Text style={[styles.dayName, state.available && styles.dayNameActive]}>{day}</Text>
+              <Text style={styles.dayStatus}>{state.available ? 'Available' : 'Unavailable'}</Text>
             </TouchableOpacity>
-          );
-        })}
-      </View>
+
+            {state.available && (
+              <View style={styles.timeRow}>
+                {TIME_OPTIONS.map((opt) => (
+                  <TouchableOpacity
+                    key={opt}
+                    style={[styles.timeChip, state.time === opt && styles.timeChipActive]}
+                    onPress={() => setTime(day, opt)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.timeChipText, state.time === opt && styles.timeChipTextActive]}>
+                      {TIME_LABELS[opt]}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+          </View>
+        );
+      })}
 
       {/* Summary */}
       <View style={styles.summaryRow}>
         <View style={[styles.summaryCard, { backgroundColor: '#DCFCE7' }]}>
-          <CheckCircle color="#16A34A" size={22} />
-          <Text style={styles.summaryNum}>{getAvailCount()}</Text>
-          <Text style={styles.summaryLabel}>Available</Text>
+          <Text style={styles.summaryNum}>{availCount}</Text>
+          <Text style={styles.summaryLabel}>Days Available</Text>
         </View>
         <View style={[styles.summaryCard, { backgroundColor: '#FEE2E2' }]}>
-          <Text style={styles.unavailX2}>✕</Text>
-          <Text style={styles.summaryNum}>{DAYS.length * TIME_SLOTS.length - getAvailCount()}</Text>
-          <Text style={styles.summaryLabel}>Unavailable</Text>
+          <Text style={styles.summaryNum}>{DAYS.length - availCount}</Text>
+          <Text style={styles.summaryLabel}>Days Unavailable</Text>
         </View>
       </View>
 
-      {/* Notes */}
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Additional Notes</Text>
-        <TextInput
-          style={styles.notesInput}
-          value={notes}
-          onChangeText={setNotes}
-          placeholder="Add any comments or special requests..."
-          placeholderTextColor="#9CA3AF"
-          multiline
-          numberOfLines={4}
-        />
-      </View>
+      {/* Description — only for mid-week resubmissions */}
+      {isResubmission && (
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Reason for Resubmission <Text style={{ color: '#DC2626' }}>*</Text></Text>
+          <TextInput
+            style={styles.textArea}
+            value={description}
+            onChangeText={setDescription}
+            placeholder="Explain why you are changing your availability mid-week..."
+            placeholderTextColor="#9CA3AF"
+            multiline
+            numberOfLines={4}
+          />
+        </View>
+      )}
 
       {/* Submit */}
-      <TouchableOpacity style={styles.submitBtn} onPress={handleSubmit} activeOpacity={0.85}>
-        <Send color="#fff" size={18} />
-        <Text style={styles.submitText}>Submit Availability</Text>
+      <TouchableOpacity
+        style={[styles.submitBtn, submitting && { opacity: 0.6 }]}
+        onPress={handleSubmit}
+        disabled={submitting}
+        activeOpacity={0.85}
+      >
+        {submitting ? (
+          <ActivityIndicator color="#fff" size="small" />
+        ) : (
+          <>
+            <Send color="#fff" size={18} />
+            <Text style={styles.submitText}>
+              {isResubmission ? 'Submit Resubmission' : 'Submit Availability'}
+            </Text>
+          </>
+        )}
       </TouchableOpacity>
-      <Text style={styles.deadline}>Deadline: Friday, March 28, 5:00 PM</Text>
     </AppShell>
   );
 }
 
 const styles = StyleSheet.create({
-  headerBox: { marginBottom: 16 },
+  headerBox: { marginBottom: 14 },
   pageTitle: { fontSize: 22, fontWeight: '800', color: '#111827' },
   pageSub: { fontSize: 13, color: '#6B7280', marginTop: 3 },
-  successBox: {
-    flexDirection: 'row',
-    gap: 10,
-    alignItems: 'center',
-    backgroundColor: '#F0FDF4',
-    borderWidth: 1,
-    borderColor: '#BBF7D0',
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 12,
+  banner: {
+    flexDirection: 'row', gap: 8, alignItems: 'flex-start',
+    borderWidth: 1, borderRadius: 10, padding: 12, marginBottom: 12,
   },
-  successText: { fontSize: 13, color: '#15803D', fontWeight: '500', flex: 1 },
-  infoBox: {
-    flexDirection: 'row',
-    gap: 8,
-    alignItems: 'center',
-    backgroundColor: '#EFF6FF',
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 16,
+  bannerText: { fontSize: 12, fontWeight: '500', flex: 1, lineHeight: 18 },
+  dayCard: {
+    backgroundColor: '#fff', borderRadius: 14, padding: 14, marginBottom: 10,
+    borderWidth: 1.5, borderColor: '#E5E7EB',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 2,
   },
-  infoText: { fontSize: 13, color: '#1D4ED8', flex: 1 },
-  dayScroll: { marginBottom: 14 },
-  dayTab: {
-    alignItems: 'center',
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    borderRadius: 12,
-    backgroundColor: '#fff',
-    marginRight: 8,
-    borderWidth: 1.5,
-    borderColor: '#E5E7EB',
-    minWidth: 68,
+  dayCardActive: { borderColor: '#2563EB', backgroundColor: '#F8FBFF' },
+  dayHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  checkbox: {
+    width: 24, height: 24, borderRadius: 6, borderWidth: 2,
+    borderColor: '#D1D5DB', alignItems: 'center', justifyContent: 'center',
   },
-  dayTabActive: { backgroundColor: '#2563EB', borderColor: '#2563EB' },
-  dayTabText: { fontSize: 13, fontWeight: '700', color: '#374151' },
-  dayTabTextActive: { color: '#fff' },
-  dayTabCount: { fontSize: 10, color: '#9CA3AF', marginTop: 2 },
-  dayTabCountActive: { color: 'rgba(255,255,255,0.75)' },
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 14,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 3,
+  checkboxChecked: { backgroundColor: '#2563EB', borderColor: '#2563EB' },
+  dayName: { fontSize: 15, fontWeight: '700', color: '#374151', flex: 1 },
+  dayNameActive: { color: '#1D4ED8' },
+  dayStatus: { fontSize: 12, color: '#9CA3AF' },
+  timeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 },
+  timeChip: {
+    paddingHorizontal: 12, paddingVertical: 7, borderRadius: 8,
+    backgroundColor: '#F3F4F6', borderWidth: 1.5, borderColor: '#E5E7EB',
   },
-  cardHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  cardTitle: { fontSize: 16, fontWeight: '700', color: '#111827' },
-  toggleAllText: { fontSize: 12, color: '#2563EB', fontWeight: '600' },
-  slotRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderWidth: 1.5,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    marginBottom: 8,
-  },
-  slotTime: { fontSize: 13, fontWeight: '700', color: '#374151' },
-  slotStatus: {
-    flexDirection: 'row',
-    gap: 6,
-    alignItems: 'center',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-  slotStatusText: { fontSize: 12, fontWeight: '700' },
-  unavailX: { fontSize: 16, color: '#DC2626' },
+  timeChipActive: { backgroundColor: '#EFF6FF', borderColor: '#2563EB' },
+  timeChipText: { fontSize: 12, fontWeight: '600', color: '#6B7280' },
+  timeChipTextActive: { color: '#2563EB' },
   summaryRow: { flexDirection: 'row', gap: 12, marginBottom: 14 },
-  summaryCard: {
-    flex: 1,
-    borderRadius: 14,
-    padding: 16,
-    alignItems: 'center',
-    gap: 4,
-  },
+  summaryCard: { flex: 1, borderRadius: 14, padding: 16, alignItems: 'center', gap: 4 },
   summaryNum: { fontSize: 28, fontWeight: '800', color: '#111827' },
   summaryLabel: { fontSize: 12, color: '#6B7280', fontWeight: '500' },
-  unavailX2: { fontSize: 24, color: '#DC2626', fontWeight: '700' },
-  notesInput: {
-    borderWidth: 1.5,
-    borderColor: '#D1D5DB',
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 14,
-    color: '#111827',
-    backgroundColor: '#F9FAFB',
-    textAlignVertical: 'top',
-    minHeight: 100,
-    marginTop: 10,
+  card: {
+    backgroundColor: '#fff', borderRadius: 14, padding: 16, marginBottom: 14,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 2,
+  },
+  cardTitle: { fontSize: 14, fontWeight: '700', color: '#111827', marginBottom: 10 },
+  textArea: {
+    borderWidth: 1.5, borderColor: '#D1D5DB', borderRadius: 10,
+    paddingHorizontal: 14, paddingVertical: 12, fontSize: 14,
+    color: '#111827', backgroundColor: '#F9FAFB',
+    textAlignVertical: 'top', minHeight: 100,
   },
   submitBtn: {
-    flexDirection: 'row',
-    gap: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#2563EB',
-    borderRadius: 14,
-    paddingVertical: 16,
-    marginBottom: 8,
-    shadowColor: '#2563EB',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 5,
+    flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: '#2563EB', borderRadius: 14, paddingVertical: 16, marginBottom: 8,
+    shadowColor: '#2563EB', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 10, elevation: 5,
   },
   submitText: { color: '#fff', fontSize: 16, fontWeight: '700' },
-  deadline: { textAlign: 'center', color: '#9CA3AF', fontSize: 12, marginBottom: 8 },
 });

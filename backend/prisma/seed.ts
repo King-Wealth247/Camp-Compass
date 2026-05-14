@@ -264,6 +264,60 @@ async function main() {
     },
   });
 
+  // Seed availability records for staff
+  // Dr. John Smith — weekend submission, available Mon/Tue/Thu mornings
+  const staffUser = await prisma.user.findUnique({ where: { email: 'staff@campus.edu' } });
+  if (staffUser) {
+    await prisma.availability.upsert({
+      where: { id: 'avail-1' },
+      update: {},
+      create: {
+        id: 'avail-1',
+        lecturerId: staffUser.id,
+        monday: true,
+        mondayTime: '08:00-12:00',
+        tuesday: true,
+        tuesdayTime: '08:00-17:00',
+        wednesday: false,
+        wednesdayTime: null,
+        thursday: true,
+        thursdayTime: '13:00-17:00',
+        friday: false,
+        fridayTime: null,
+        saturday: false,
+        saturdayTime: null,
+        resubmission: null,
+        description: null,
+        submissionDate: new Date('2026-05-10T18:00:00Z'), // Saturday submission
+      },
+    });
+
+    // Mid-week resubmission — Dr. John Smith changed Thursday availability
+    await prisma.availability.upsert({
+      where: { id: 'avail-2' },
+      update: {},
+      create: {
+        id: 'avail-2',
+        lecturerId: staffUser.id,
+        monday: true,
+        mondayTime: '08:00-12:00',
+        tuesday: true,
+        tuesdayTime: '08:00-17:00',
+        wednesday: false,
+        wednesdayTime: null,
+        thursday: false,
+        thursdayTime: null,
+        friday: true,
+        fridayTime: '13:00-17:00',
+        saturday: false,
+        saturdayTime: null,
+        resubmission: 'unseen',
+        description: 'Medical appointment on Thursday. Moved availability to Friday afternoon instead.',
+        submissionDate: new Date('2026-05-13T10:00:00Z'), // Tuesday resubmission
+      },
+    });
+  }
+
   console.log('Database seeded successfully');
 }
 

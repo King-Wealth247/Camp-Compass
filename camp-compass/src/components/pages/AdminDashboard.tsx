@@ -1,13 +1,45 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/app/context/AuthContext";
-import { Calendar, Building2, Users, AlertTriangle } from "lucide-react";
+import { Calendar, Building2, Users, AlertTriangle, CheckCircle, XCircle, Loader2 } from "lucide-react";
 import { halls, timetableData } from "@/app/data/mockData";
-import { dataService } from "@/lib/dataService";
+import { dataService, Availability } from "@/lib/dataService";
 
 export function AdminDashboard() {
   const { user } = useAuth();
   const [generationStatus, setGenerationStatus] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [resubmissions, setResubmissions] = useState<Availability[]>([]);
+  const [loadingResubmissions, setLoadingResubmissions] = useState(true);
+
+  useEffect(() => {
+    loadResubmissions();
+  }, []);
+
+  const loadResubmissions = async () => {
+    try {
+      const response = await dataService.getAvailabilities();
+      if (response.data) {
+        // Filter for unseen resubmissions
+        const pending = response.data.filter(r => r.resubmission === 'unseen');
+        setResubmissions(pending);
+      }
+    } catch (error) {
+      console.error("Failed to load resubmissions:", error);
+    } finally {
+      setLoadingResubmissions(false);
+    }
+  };
+
+  const handleReviewResubmission = async (id: string, action: 'validate' | 'reject') => {
+    try {
+      await dataService.reviewAvailability(id, action);
+      // Refresh the list
+      await loadResubmissions();
+    } catch (error) {
+      console.error("Failed to review resubmission:", error);
+      alert("Failed to process review. Please try again.");
+    }
+  };
 
   if (!user) return null;
 
@@ -51,53 +83,70 @@ export function AdminDashboard() {
           <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center mb-4">
             <AlertTriangle className="w-6 h-6 text-orange-600" />
           </div>
-          <p className="text-2xl font-bold text-gray-900">2</p>
-          <p className="text-sm text-gray-600">Conflicts Detected</p>
+          <p className="text-2xl font-bold text-gray-900">{resubmissions.length}</p>
+          <p className="text-sm text-gray-600">Pending Resubmissions</p>
         </div>
       </div>
 
       <div className="grid lg:grid-cols-2 gap-6">
-        {/* Recent Changes */}
+        {/* Availability Resubmissions */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100">
           <div className="p-6 border-b border-gray-100">
             <h2 className="text-xl font-bold text-gray-900">
-              Recent Availability Changes
+              Pending Availability Resubmissions
             </h2>
-            <p className="text-sm text-gray-600 mt-1">Lecturer updates this week</p>
+            <p className="text-sm text-gray-600 mt-1">Lecturer availability changes requiring review</p>
           </div>
           <div className="p-6">
-            <div className="space-y-3">
-              <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                <div className="flex items-start gap-3">
-                  <AlertTriangle className="w-5 h-5 text-yellow-600 mt-0.5" />
-                  <div className="flex-1">
-                    <p className="font-semibold text-gray-900">
-                      Dr. John Smith - Unavailable
-                    </p>
-                    <p className="text-sm text-gray-600 mt-1">
-                      Thursday 14:00-16:00 • Medical appointment
-                    </p>
-                    <button className="mt-2 text-sm text-blue-600 hover:text-blue-700 font-medium">
-                      Reschedule Course →
-                    </button>
+            {loadingResubmissions ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+              </div>
+            ) : resubmissions.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <CheckCircle className="w-12 h-12 mx-auto mb-4 text-green-400" />
+                <p>No pending resubmissions</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {resubmissions.map((resubmission) => (
+                  <div key={resubmission.id} className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <div className="flex items-start gap-3">
+                      <AlertTriangle className="w-5 h-5 text-yellow-600 mt-0.5" />
+                      <div className="flex-1">
+                        <p className="font-semibold text-gray-900">
+                          {resubmission.lecturer.name} - Availability Update
+                        </p>
+                        <p className="text-sm text-gray-600 mt-1">
+                          Submitted: {new Date(resubmission.submissionDate).toLocaleDateString()}
+                        </p>
+                        {resubmission.description && (
+                          <p className="text-sm text-gray-600 mt-1 italic">
+                            "{resubmission.description}"
+                          </p>
+                        )}
+                        <div className="mt-3 flex gap-2">
+                          <button
+                            onClick={() => handleReviewResubmission(resubmission.id, 'validate')}
+                            className="px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700 transition flex items-center gap-1"
+                          >
+                            <CheckCircle className="w-4 h-4" />
+                            Validate
+                          </button>
+                          <button
+                            onClick={() => handleReviewResubmission(resubmission.id, 'reject')}
+                            className="px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700 transition flex items-center gap-1"
+                          >
+                            <XCircle className="w-4 h-4" />
+                            Reject
+                          </button>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                </div>
+                ))}
               </div>
-
-              <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                <p className="font-semibold text-gray-900">Dr. Sarah Johnson</p>
-                <p className="text-sm text-gray-600 mt-1">
-                  Available all week • No conflicts
-                </p>
-              </div>
-
-              <div className="p-4 bg-gray-50 rounded-lg">
-                <p className="font-semibold text-gray-900">Dr. Emily Brown</p>
-                <p className="text-sm text-gray-600 mt-1">
-                  Available all week • No conflicts
-                </p>
-              </div>
-            </div>
+            )}
           </div>
         </div>
 

@@ -1,72 +1,138 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/app/context/AuthContext";
-import { Calendar, Clock, CheckCircle, AlertCircle, Send } from "lucide-react";
+import { Calendar, Clock, CheckCircle, AlertCircle, Send, Loader2 } from "lucide-react";
+import { dataService, Availability } from "@/lib/dataService";
 
-const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
-const TIME_SLOTS = [
-  "08:00-10:00",
-  "10:00-12:00",
-  "12:00-14:00",
-  "14:00-16:00",
-  "16:00-18:00",
+const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const TIME_RANGES = [
+  { value: "08:00-12:00", label: "8:00 AM - 12:00 PM" },
+  { value: "13:00-17:00", label: "1:00 PM - 5:00 PM" },
+  { value: "08:00-17:00", label: "8:00 AM - 5:00 PM" },
 ];
 
-interface Availability {
-  [key: string]: {
-    [key: string]: boolean;
-  };
+interface AvailabilityForm {
+  monday: boolean;
+  mondayTime: string;
+  tuesday: boolean;
+  tuesdayTime: string;
+  wednesday: boolean;
+  wednesdayTime: string;
+  thursday: boolean;
+  thursdayTime: string;
+  friday: boolean;
+  fridayTime: string;
+  saturday: boolean;
+  saturdayTime: string;
+  description: string;
 }
 
 export function AvailabilityPage() {
   const { user } = useAuth();
-  const [availability, setAvailability] = useState<Availability>(() => {
-    const initial: Availability = {};
-    DAYS.forEach((day) => {
-      initial[day] = {};
-      TIME_SLOTS.forEach((slot) => {
-        initial[day][slot] = true; // Default to available
-      });
-    });
-    return initial;
+  const [form, setForm] = useState<AvailabilityForm>({
+    monday: false,
+    mondayTime: "08:00-17:00",
+    tuesday: false,
+    tuesdayTime: "08:00-17:00",
+    wednesday: false,
+    wednesdayTime: "08:00-17:00",
+    thursday: false,
+    thursdayTime: "08:00-17:00",
+    friday: false,
+    fridayTime: "08:00-17:00",
+    saturday: false,
+    saturdayTime: "08:00-17:00",
+    description: "",
   });
-  const [notes, setNotes] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [existingAvailability, setExistingAvailability] = useState<Availability | null>(null);
+
+  useEffect(() => {
+    if (user?.id) {
+      loadExistingAvailability();
+    }
+  }, [user]);
+
+  const loadExistingAvailability = async () => {
+    if (!user?.id) return;
+    try {
+      const response = await dataService.getAvailabilities(user.id);
+      if (response.data && response.data.length > 0) {
+        const latest = response.data[0]; // Most recent first
+        setExistingAvailability(latest);
+        setForm({
+          monday: latest.monday,
+          mondayTime: latest.mondayTime || "08:00-17:00",
+          tuesday: latest.tuesday,
+          tuesdayTime: latest.tuesdayTime || "08:00-17:00",
+          wednesday: latest.wednesday,
+          wednesdayTime: latest.wednesdayTime || "08:00-17:00",
+          thursday: latest.thursday,
+          thursdayTime: latest.thursdayTime || "08:00-17:00",
+          friday: latest.friday,
+          fridayTime: latest.fridayTime || "08:00-17:00",
+          saturday: latest.saturday,
+          saturdayTime: latest.saturdayTime || "08:00-17:00",
+          description: latest.description || "",
+        });
+      }
+    } catch (error) {
+      console.error("Failed to load availability:", error);
+    }
+  };
 
   if (!user) return null;
 
-  const toggleSlot = (day: string, slot: string) => {
-    setAvailability((prev) => ({
+  const handleDayToggle = (day: string) => {
+    const dayKey = day.toLowerCase() as keyof AvailabilityForm;
+    const timeKey = `${day.toLowerCase()}Time` as keyof AvailabilityForm;
+    setForm(prev => ({
       ...prev,
-      [day]: {
-        ...prev[day],
-        [slot]: !prev[day][slot],
-      },
+      [dayKey]: !prev[dayKey],
     }));
   };
 
-  const toggleDay = (day: string) => {
-    const allAvailable = TIME_SLOTS.every((slot) => availability[day][slot]);
-    setAvailability((prev) => ({
+  const handleTimeChange = (day: string, time: string) => {
+    const timeKey = `${day.toLowerCase()}Time` as keyof AvailabilityForm;
+    setForm(prev => ({
       ...prev,
-      [day]: Object.fromEntries(
-        TIME_SLOTS.map((slot) => [slot, !allAvailable])
-      ),
+      [timeKey]: time,
     }));
   };
 
-  const handleSubmit = () => {
-    setSubmitted(true);
-    setTimeout(() => setSubmitted(false), 3000);
-  };
-
-  const getAvailableCount = () => {
-    let count = 0;
-    DAYS.forEach((day) => {
-      TIME_SLOTS.forEach((slot) => {
-        if (availability[day][slot]) count++;
+  const handleSubmit = async () => {
+    if (!user?.id) return;
+    setLoading(true);
+    try {
+      await dataService.submitAvailability({
+        lecturerId: user.id,
+        monday: form.monday,
+        mondayTime: form.monday ? form.mondayTime : undefined,
+        tuesday: form.tuesday,
+        tuesdayTime: form.tuesday ? form.tuesdayTime : undefined,
+        wednesday: form.wednesday,
+        wednesdayTime: form.wednesday ? form.wednesdayTime : undefined,
+        thursday: form.thursday,
+        thursdayTime: form.thursday ? form.thursdayTime : undefined,
+        friday: form.friday,
+        fridayTime: form.friday ? form.fridayTime : undefined,
+        saturday: form.saturday,
+        saturdayTime: form.saturday ? form.saturdayTime : undefined,
+        description: form.description || undefined,
       });
-    });
-    return count;
+      setSubmitted(true);
+      setTimeout(() => setSubmitted(false), 3000);
+      await loadExistingAvailability(); // Refresh data
+    } catch (error) {
+      console.error("Failed to submit availability:", error);
+      alert("Failed to submit availability. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getAvailableDaysCount = () => {
+    return DAYS.filter(day => form[day.toLowerCase() as keyof AvailabilityForm] as boolean).length;
   };
 
   return (
@@ -106,7 +172,7 @@ export function AvailabilityPage() {
       )}
 
       <div className="grid lg:grid-cols-3 gap-6">
-        {/* Availability Grid */}
+        {/* Availability Form */}
         <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="p-6 bg-gray-50 border-b border-gray-200">
             <div className="flex items-center justify-between">
@@ -114,61 +180,54 @@ export function AvailabilityPage() {
                 Weekly Availability
               </h2>
               <p className="text-sm text-gray-600">
-                Click to toggle availability
+                Select days and time ranges you're available
               </p>
             </div>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="p-4 text-left text-sm font-semibold text-gray-700 border-b border-gray-200 min-w-[120px]">
-                    Time Slot
-                  </th>
-                  {DAYS.map((day) => (
-                    <th
-                      key={day}
-                      className="p-4 text-center text-sm font-semibold text-gray-700 border-b border-gray-200 min-w-[140px]"
-                    >
-                      <button
-                        onClick={() => toggleDay(day)}
-                        className="hover:text-blue-600 transition"
-                      >
-                        {day}
-                      </button>
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {TIME_SLOTS.map((slot) => (
-                  <tr key={slot} className="border-b border-gray-100">
-                    <td className="p-4 text-sm font-medium text-gray-700 bg-gray-50">
-                      {slot}
-                    </td>
-                    {DAYS.map((day) => (
-                      <td key={`${day}-${slot}`} className="p-2">
-                        <button
-                          onClick={() => toggleSlot(day, slot)}
-                          className={`w-full h-16 rounded-lg transition-all ${
-                            availability[day][slot]
-                              ? "bg-green-100 hover:bg-green-200 border-2 border-green-400"
-                              : "bg-red-100 hover:bg-red-200 border-2 border-red-400"
-                          }`}
-                        >
-                          {availability[day][slot] ? (
-                            <CheckCircle className="w-6 h-6 mx-auto text-green-600" />
-                          ) : (
-                            <span className="text-red-600 text-xl">✕</span>
-                          )}
-                        </button>
-                      </td>
+          <div className="p-6 space-y-6">
+            {DAYS.map((day) => (
+              <div key={day} className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg">
+                <div className="flex items-center gap-3 flex-1">
+                  <input
+                    type="checkbox"
+                    id={day}
+                    checked={form[day.toLowerCase() as keyof AvailabilityForm] as boolean}
+                    onChange={() => handleDayToggle(day)}
+                    className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                  />
+                  <label htmlFor={day} className="text-sm font-medium text-gray-900">
+                    {day}
+                  </label>
+                </div>
+                {form[day.toLowerCase() as keyof AvailabilityForm] && (
+                  <select
+                    value={form[`${day.toLowerCase()}Time` as keyof AvailabilityForm] as string}
+                    onChange={(e) => handleTimeChange(day, e.target.value)}
+                    className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    {TIME_RANGES.map((range) => (
+                      <option key={range.value} value={range.value}>
+                        {range.label}
+                      </option>
                     ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                  </select>
+                )}
+              </div>
+            ))}
+
+            <div className="pt-4 border-t border-gray-200">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Additional Notes (Optional)
+              </label>
+              <textarea
+                value={form.description}
+                onChange={(e) => setForm(prev => ({ ...prev, description: e.target.value }))}
+                placeholder="Any special circumstances or notes..."
+                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
+                rows={3}
+              />
+            </div>
           </div>
         </div>
 
@@ -184,53 +243,44 @@ export function AvailabilityPage() {
                 </div>
                 <div>
                   <p className="text-2xl font-bold text-gray-900">
-                    {getAvailableCount()}
+                    {getAvailableDaysCount()}
                   </p>
-                  <p className="text-sm text-gray-600">Available Slots</p>
+                  <p className="text-sm text-gray-600">Available Days</p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
-                  <Clock className="w-6 h-6 text-red-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {DAYS.length * TIME_SLOTS.length - getAvailableCount()}
+              {existingAvailability && (
+                <div className="pt-4 border-t border-gray-200">
+                  <p className="text-sm text-gray-600 mb-2">Last submitted:</p>
+                  <p className="text-sm font-medium text-gray-900">
+                    {new Date(existingAvailability.submissionDate).toLocaleDateString()}
                   </p>
-                  <p className="text-sm text-gray-600">Unavailable Slots</p>
+                  {existingAvailability.resubmission && (
+                    <p className={`text-xs mt-1 ${
+                      existingAvailability.resubmission === 'validated' ? 'text-green-600' :
+                      existingAvailability.resubmission === 'rejected' ? 'text-red-600' : 'text-yellow-600'
+                    }`}>
+                      Status: {existingAvailability.resubmission}
+                    </p>
+                  )}
                 </div>
-              </div>
+              )}
             </div>
           </div>
 
-          {/* Notes */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <h3 className="font-semibold text-gray-900 mb-3">
-              Additional Notes
-            </h3>
-            <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Add any comments or special requests..."
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none"
-              rows={4}
-            />
-          </div>
-
-          {/* Submit */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <button
-              onClick={handleSubmit}
-              className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"
-            >
+          {/* Submit Button */}
+          <button
+            onClick={handleSubmit}
+            disabled={loading}
+            className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+          >
+            {loading ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
               <Send className="w-5 h-5" />
-              Submit Availability
-            </button>
-            <p className="text-xs text-gray-500 text-center mt-3">
-              Deadline: Friday, March 28, 5:00 PM
-            </p>
-          </div>
+            )}
+            {existingAvailability ? 'Update Availability' : 'Submit Availability'}
+          </button>
 
           {/* Legend */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">

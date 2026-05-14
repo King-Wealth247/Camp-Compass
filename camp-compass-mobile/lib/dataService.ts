@@ -37,7 +37,24 @@ export interface Timetable {
   createdAt: string;
 }
 
-function normalizeHall(raw: any): Hall {
+export interface Availability {
+  id: string;
+  lecturerId: string;
+  lecturer?: { id: string; name: string; email: string };
+  monday: boolean; mondayTime: string | null;
+  tuesday: boolean; tuesdayTime: string | null;
+  wednesday: boolean; wednesdayTime: string | null;
+  thursday: boolean; thursdayTime: string | null;
+  friday: boolean; fridayTime: string | null;
+  saturday: boolean; saturdayTime: string | null;
+  resubmission: 'unseen' | 'validated' | 'rejected' | null;
+  description: string | null;
+  submissionDate: string;
+}
+
+export type AvailabilityPayload = Omit<Availability, 'id' | 'submissionDate' | 'lecturer' | 'resubmission'>;
+
+(raw: any): Hall {
   return {
     ...raw,
     available: raw.available ?? raw.isAvailable ?? false,
@@ -107,7 +124,21 @@ export class DataService {
     return apiClient.post<Timetable>('/api/timetable', data);
   }
 
-  async generateTimetable(params: {
+  // Availability endpoints
+  async getAvailabilities(lecturerId?: string): Promise<ApiResponse<Availability[]>> {
+    const query = lecturerId ? `?lecturerId=${encodeURIComponent(lecturerId)}` : '';
+    return apiClient.get<Availability[]>(`/api/availability${query}`);
+  }
+
+  async submitAvailability(data: AvailabilityPayload): Promise<ApiResponse<Availability>> {
+    return apiClient.post<Availability>('/api/availability', data);
+  }
+
+  async reviewResubmission(id: string, action: 'validate' | 'reject'): Promise<ApiResponse<{ availability: Availability; message: string; regenerated?: number }>> {
+    return apiClient.patch(`/api/availability/${id}`, { action });
+  }
+
+(params: {
     campusId: string;
     startDate: string;
     endDate: string;

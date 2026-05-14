@@ -14,6 +14,12 @@ enum UserRole {
   registrar
 }
 
+enum ResubmissionStatus {
+  unseen
+  validated
+  rejected
+}
+
 model Institution {
   id        String    @id @default(cuid())
   name      String
@@ -87,15 +93,37 @@ model Timetable {
 }
 
 model User {
-  id             String      @id @default(cuid())
-  email          String      @unique
+  id             String         @id @default(cuid())
+  email          String         @unique
   password       String
   name           String
-  role           UserRole    @default(student)
+  role           UserRole       @default(student)
   department     String?
   level          String?
-  tuitionPaid    Boolean     @default(false)
-  institution    Institution @relation(fields: [institutionId], references: [id])
+  tuitionPaid    Boolean        @default(false)
+  institution    Institution    @relation(fields: [institutionId], references: [id])
   institutionId  String
-  createdAt      DateTime    @default(now())
+  availabilities Availability[]
+  createdAt      DateTime       @default(now())
+}
+
+model Availability {
+  id               String              @id @default(cuid())
+  lecturer         User                @relation(fields: [lecturerId], references: [id])
+  lecturerId       String
+  monday           Boolean             @default(false)
+  mondayTime       String?
+  tuesday          Boolean             @default(false)
+  tuesdayTime      String?
+  wednesday        Boolean             @default(false)
+  wednesdayTime    String?
+  thursday         Boolean             @default(false)
+  thursdayTime     String?
+  friday           Boolean             @default(false)
+  fridayTime       String?
+  saturday         Boolean             @default(false)
+  saturdayTime     String?
+  resubmission     ResubmissionStatus? @default(unseen)
+  description      String?
+  submissionDate   DateTime            @default(now())
 }

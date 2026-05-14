@@ -81,6 +81,31 @@ export interface Timetable {
   createdAt: string;
 }
 
+export interface Availability {
+  id: string;
+  lecturerId: string;
+  monday: boolean;
+  mondayTime: string | null;
+  tuesday: boolean;
+  tuesdayTime: string | null;
+  wednesday: boolean;
+  wednesdayTime: string | null;
+  thursday: boolean;
+  thursdayTime: string | null;
+  friday: boolean;
+  fridayTime: string | null;
+  saturday: boolean;
+  saturdayTime: string | null;
+  resubmission: 'unseen' | 'validated' | 'rejected' | null;
+  description: string | null;
+  submissionDate: string;
+  lecturer: {
+    id: string;
+    name: string;
+    email: string;
+  };
+}
+
 function normalizeHall(raw: any): Hall {
   return {
     ...raw,
@@ -268,6 +293,35 @@ export class DataService {
     endDate?: string;
   }): Promise<ApiResponse<{ jobId: string; message: string; generated?: Timetable[] }>> {
     return apiClient.post('/api/timetable/generate', params);
+  }
+
+  // Availability endpoints
+  async getAvailabilities(lecturerId?: string): Promise<ApiResponse<Availability[]>> {
+    const url = lecturerId ? `/api/availability?lecturerId=${lecturerId}` : '/api/availability';
+    return apiClient.get<Availability[]>(url);
+  }
+
+  async submitAvailability(data: {
+    lecturerId: string;
+    monday: boolean;
+    mondayTime?: string;
+    tuesday: boolean;
+    tuesdayTime?: string;
+    wednesday: boolean;
+    wednesdayTime?: string;
+    thursday: boolean;
+    thursdayTime?: string;
+    friday: boolean;
+    fridayTime?: string;
+    saturday: boolean;
+    saturdayTime?: string;
+    description?: string;
+  }): Promise<ApiResponse<Availability>> {
+    return apiClient.post<Availability>('/api/availability', data);
+  }
+
+  async reviewAvailability(id: string, action: 'validate' | 'reject'): Promise<ApiResponse<Availability>> {
+    return apiClient.patch<Availability>(`/api/availability/${id}`, { action });
   }
 }
 
