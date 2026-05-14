@@ -43,6 +43,8 @@ export interface TimetableEntry {
   lecturerName: string;
   hallId: string;
   hallCode: string;
+  buildingId: string;
+  floor: number;
   day: string;
   startTime: string;
   endTime: string;
@@ -158,90 +160,23 @@ export const halls: Hall[] = [
 ];
 
 export const timetableData: TimetableEntry[] = [
-  {
-    id: "1",
-    courseId: "CS301",
-    courseName: "Data Structures",
-    courseCode: "CS301",
-    lecturerName: "Dr. John Smith",
-    hallId: "1",
-    hallCode: "ENG-101",
-    day: "Monday",
-    startTime: "09:00",
-    endTime: "11:00",
-    department: "Computer Science",
-    level: "Year 3",
-  },
-  {
-    id: "2",
-    courseId: "CS302",
-    courseName: "Database Systems",
-    courseCode: "CS302",
-    lecturerName: "Dr. Sarah Johnson",
-    hallId: "2",
-    hallCode: "ENG-201",
-    day: "Monday",
-    startTime: "11:00",
-    endTime: "13:00",
-    department: "Computer Science",
-    level: "Year 3",
-  },
-  {
-    id: "3",
-    courseId: "CS303",
-    courseName: "Software Engineering",
-    courseCode: "CS303",
-    lecturerName: "Dr. John Smith",
-    hallId: "1",
-    hallCode: "ENG-101",
-    day: "Tuesday",
-    startTime: "09:00",
-    endTime: "11:00",
-    department: "Computer Science",
-    level: "Year 3",
-  },
-  {
-    id: "4",
-    courseId: "CS304",
-    courseName: "Web Development",
-    courseCode: "CS304",
-    lecturerName: "Dr. Emily Brown",
-    hallId: "2",
-    hallCode: "ENG-201",
-    day: "Wednesday",
-    startTime: "14:00",
-    endTime: "16:00",
-    department: "Computer Science",
-    level: "Year 3",
-  },
-  {
-    id: "5",
-    courseId: "CS305",
-    courseName: "Operating Systems",
-    courseCode: "CS305",
-    lecturerName: "Dr. John Smith",
-    hallId: "1",
-    hallCode: "ENG-101",
-    day: "Thursday",
-    startTime: "09:00",
-    endTime: "11:00",
-    department: "Computer Science",
-    level: "Year 3",
-  },
-  {
-    id: "6",
-    courseId: "CS306",
-    courseName: "Computer Networks",
-    courseCode: "CS306",
-    lecturerName: "Dr. Michael Davis",
-    hallId: "4",
-    hallCode: "ENG-301",
-    day: "Friday",
-    startTime: "11:00",
-    endTime: "13:00",
-    department: "Computer Science",
-    level: "Year 3",
-  },
+  // Computer Science - Year 3
+  { id: "1", courseId: "CS301", courseName: "Data Structures", courseCode: "CS301", lecturerName: "Dr. John Smith", hallId: "1", hallCode: "ENG-101", buildingId: "1", floor: 1, day: "Monday", startTime: "09:00", endTime: "11:00", department: "Computer Science", level: "Year 3" },
+  { id: "2", courseId: "CS302", courseName: "Database Systems", courseCode: "CS302", lecturerName: "Dr. Sarah Johnson", hallId: "2", hallCode: "ENG-201", buildingId: "1", floor: 2, day: "Monday", startTime: "11:00", endTime: "13:00", department: "Computer Science", level: "Year 3" },
+  { id: "3", courseId: "CS303", courseName: "Software Engineering", courseCode: "CS303", lecturerName: "Dr. John Smith", hallId: "1", hallCode: "ENG-101", buildingId: "1", floor: 1, day: "Tuesday", startTime: "09:00", endTime: "11:00", department: "Computer Science", level: "Year 3" },
+  { id: "4", courseId: "CS304", courseName: "Web Development", courseCode: "CS304", lecturerName: "Dr. Emily Brown", hallId: "2", hallCode: "ENG-201", buildingId: "1", floor: 2, day: "Wednesday", startTime: "14:00", endTime: "16:00", department: "Computer Science", level: "Year 3" },
+  { id: "5", courseId: "CS305", courseName: "Operating Systems", courseCode: "CS305", lecturerName: "Dr. John Smith", hallId: "1", hallCode: "ENG-101", buildingId: "1", floor: 1, day: "Thursday", startTime: "09:00", endTime: "11:00", department: "Computer Science", level: "Year 3" },
+  { id: "6", courseId: "CS306", courseName: "Computer Networks", courseCode: "CS306", lecturerName: "Dr. Michael Davis", hallId: "4", hallCode: "ENG-301", buildingId: "1", floor: 3, day: "Friday", startTime: "11:00", endTime: "13:00", department: "Computer Science", level: "Year 3" },
+  // Computer Science - Year 1
+  { id: "7", courseId: "CS101", courseName: "Intro to Programming", courseCode: "CS101", lecturerName: "Dr. Emily Brown", hallId: "5", hallCode: "LIB-201", buildingId: "3", floor: 2, day: "Monday", startTime: "08:00", endTime: "10:00", department: "Computer Science", level: "Year 1" },
+  { id: "8", courseId: "CS102", courseName: "Discrete Mathematics", courseCode: "CS102", lecturerName: "Dr. Michael Davis", hallId: "1", hallCode: "ENG-101", buildingId: "1", floor: 1, day: "Wednesday", startTime: "10:00", endTime: "12:00", department: "Computer Science", level: "Year 1" },
+  // Engineering - Year 2
+  { id: "9", courseId: "ENG201", courseName: "Thermodynamics", courseCode: "ENG201", lecturerName: "Dr. Sarah Johnson", hallId: "1", hallCode: "ENG-101", buildingId: "1", floor: 1, day: "Tuesday", startTime: "13:00", endTime: "15:00", department: "Engineering", level: "Year 2" },
+  { id: "10", courseId: "ENG202", courseName: "Fluid Mechanics", courseCode: "ENG202", lecturerName: "Dr. John Smith", hallId: "4", hallCode: "ENG-301", buildingId: "1", floor: 3, day: "Thursday", startTime: "13:00", endTime: "15:00", department: "Engineering", level: "Year 2" },
+  { id: "11", courseId: "ENG203", courseName: "Circuit Analysis", courseCode: "ENG203", lecturerName: "Dr. Michael Davis", hallId: "2", hallCode: "ENG-201", buildingId: "1", floor: 2, day: "Friday", startTime: "09:00", endTime: "11:00", department: "Engineering", level: "Year 2" },
+  // Science - Year 1
+  { id: "12", courseId: "SCI101", courseName: "General Chemistry", courseCode: "SCI101", lecturerName: "Dr. Emily Brown", hallId: "3", hallCode: "SCI-102", buildingId: "2", floor: 1, day: "Monday", startTime: "14:00", endTime: "16:00", department: "Science", level: "Year 1" },
+  { id: "13", courseId: "SCI102", courseName: "Physics I", courseCode: "SCI102", lecturerName: "Dr. Sarah Johnson", hallId: "3", hallCode: "SCI-201", buildingId: "2", floor: 2, day: "Wednesday", startTime: "08:00", endTime: "10:00", department: "Science", level: "Year 1" },
 ];
 
 export const notifications: Notification[] = [

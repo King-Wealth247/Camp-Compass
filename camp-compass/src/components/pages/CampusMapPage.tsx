@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   Building2,
   MapPin,
@@ -75,13 +76,28 @@ export function CampusMapPage() {
     latitude: "",
     longitude: "",
   });
+  const searchParams = useSearchParams();
+  const deepLinkBuildingId = searchParams.get("buildingId");
+  const deepLinkFloor = searchParams.get("floor");
+  const deepLinkHallCode = searchParams.get("hallCode");
+  const [highlightHall, setHighlightHall] = useState<string | null>(null);
   const [hallSearchQuery, setHallSearchQuery] = useState("");
   const [mapError, setMapError] = useState<string | null>(null);
+
   const [mapLoading, setMapLoading] = useState(false);
 
   const mapRef = useRef<HTMLDivElement | null>(null);
   const mapInstance = useRef<any>(null);
   const markers = useRef<any[]>([]);
+
+  // Deep-link from timetable: auto-open building/floor/hall
+  useEffect(() => {
+    if (deepLinkBuildingId && buildings.length > 0) {
+      setSelectedBuildingId(deepLinkBuildingId);
+      if (deepLinkFloor) setSelectedFloor(Number(deepLinkFloor));
+      if (deepLinkHallCode) setHighlightHall(decodeURIComponent(deepLinkHallCode));
+    }
+  }, [deepLinkBuildingId, buildings]);
 
   const selectedCampus = useMemo(
     () => campuses.find((campus) => campus.id === selectedCampusId) || campuses[0] || null,
@@ -839,7 +855,11 @@ export function CampusMapPage() {
                         {activeFloorHalls.map((hall, index) => (
                           <div
                             key={hall.id}
-                            className="absolute rounded-2xl border border-blue-200 bg-blue-600/90 text-white p-3 shadow-lg"
+                            className={`absolute rounded-2xl border p-3 shadow-lg text-white ${
+                              highlightHall === hall.name
+                                ? 'border-red-400 bg-red-500 scale-110'
+                                : 'border-blue-200 bg-blue-600/90'
+                            }`}
                             style={{
                               width: '25%',
                               left: `${8 + (index % 3) * 30}%`,
@@ -860,6 +880,11 @@ export function CampusMapPage() {
                   </div>
 
                   <div className="rounded-3xl bg-white shadow p-6">
+                    {highlightHall && (
+                      <div className="mb-4 px-4 py-2 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700 font-medium">
+                        Navigating to: <span className="font-bold">{highlightHall}</span>
+                      </div>
+                    )}
                     <div className="flex items-center justify-between gap-3 mb-4">
                       <h4 className="text-lg font-semibold text-gray-900">Current Floor Rooms</h4>
                       <div className="relative w-64">
@@ -875,7 +900,11 @@ export function CampusMapPage() {
                     </div>
                     <div className="grid gap-4 md:grid-cols-2">
                       {filteredFloorHalls.map((hall) => (
-                        <div key={hall.id} className="rounded-3xl border border-gray-200 bg-gray-50 p-4">
+                        <div key={hall.id} className={`rounded-3xl border p-4 ${
+                              highlightHall === hall.name
+                                ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-400'
+                                : 'border-gray-200 bg-gray-50'
+                            }`}>
                           <div className="flex items-center justify-between gap-3">
                             <div>
                               <p className="font-semibold text-gray-900">{hall.name}</p>
