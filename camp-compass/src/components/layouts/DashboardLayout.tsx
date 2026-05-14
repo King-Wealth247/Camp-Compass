@@ -13,8 +13,11 @@ import {
   Users,
   Settings
 } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { ChangePasswordModal } from "@/components/pages/ChangePasswordModal";
+import { dataService } from "@/lib/dataService";
+import { requestForToken, onMessageListener } from "@/lib/firebase";
+import { toast } from "sonner";
 
 // Routes each role is allowed to access
 const ROLE_ALLOWED_PATHS: Record<string, string[]> = {
@@ -31,6 +34,33 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    if (user) {
+      // Fetch unread count
+      dataService.getNotifications().then(res => {
+        if (res.data) {
+          setUnreadCount(res.data.filter(n => !n.read).length);
+        }
+      });
+
+      // Request FCM Token
+      requestForToken().then(token => {
+        if (token) dataService.saveFcmToken(token).catch(console.error);
+      });
+
+      // Listen for foreground messages
+      onMessageListener().then((payload: any) => {
+        if (payload?.notification) {
+          toast(payload.notification.title, {
+            description: payload.notification.body,
+          });
+          setUnreadCount(prev => prev + 1);
+        }
+      }).catch(err => console.log('failed: ', err));
+    }
+  }, [user]);
 
   useEffect(() => {
     if (!user) {
@@ -129,7 +159,12 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                   }`}
               >
                 <Icon className="w-5 h-5" />
-                <span className="font-medium">{item.label}</span>
+                <span className="font-medium flex-1 text-left">{item.label}</span>
+                {item.label === "Notifications" && unreadCount > 0 && (
+                  <span className="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                    {unreadCount}
+                  </span>
+                )}
               </button>
             );
           })}

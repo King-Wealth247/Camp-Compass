@@ -7,6 +7,8 @@ export const metadata: Metadata = {
   description: "Camp Compass Application",
 };
 
+import { Toaster } from 'sonner';
+
 export default function RootLayout({
   children,
 }: {
@@ -16,6 +18,7 @@ export default function RootLayout({
     <html lang="en">
       <body>
         <AuthProvider>{children}</AuthProvider>
+        <Toaster position="top-right" richColors />
       </body>
     </html>
   );

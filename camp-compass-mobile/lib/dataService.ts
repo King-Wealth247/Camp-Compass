@@ -54,7 +54,17 @@ export interface Availability {
 
 export type AvailabilityPayload = Omit<Availability, 'id' | 'submissionDate' | 'lecturer' | 'resubmission'>;
 
-(raw: any): Hall {
+export interface Notification {
+  id: string;
+  userId: string;
+  title: string;
+  message: string;
+  type: 'info' | 'warning' | 'success';
+  read: boolean;
+  createdAt: string;
+}
+
+function normalizeHall(raw: any): Hall {
   return {
     ...raw,
     available: raw.available ?? raw.isAvailable ?? false,
@@ -138,12 +148,29 @@ export class DataService {
     return apiClient.patch(`/api/availability/${id}`, { action });
   }
 
-(params: {
+  async generateTimetable(params: {
     campusId: string;
     startDate: string;
     endDate: string;
   }): Promise<ApiResponse<{ jobId: string; message: string }>> {
     return apiClient.post('/api/timetable/generate', params);
+  }
+
+  // Notification endpoints
+  async getNotifications(): Promise<ApiResponse<Notification[]>> {
+    return apiClient.get<Notification[]>('/api/notifications');
+  }
+
+  async markNotificationRead(id: string): Promise<ApiResponse<any>> {
+    return apiClient.patch<any>(`/api/notifications/${id}`, {});
+  }
+
+  async deleteNotification(id: string): Promise<ApiResponse<any>> {
+    return apiClient.delete(`/api/notifications/${id}`);
+  }
+
+  async saveFcmToken(token: string): Promise<ApiResponse<any>> {
+    return apiClient.post<any>('/api/users/fcm-token', { token });
   }
 }
 

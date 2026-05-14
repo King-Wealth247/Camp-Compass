@@ -2,9 +2,9 @@ import { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { AppShell } from '@/components/AppShell';
 import {
-  Bell, AlertTriangle, CheckCircle, Info, Check, Trash2,
+  Bell, AlertTriangle, CheckCircle, Info, Check, Trash2, Loader
 } from 'lucide-react-native';
-import { notifications as initial } from '@/data/mockData';
+import { dataService, Notification } from '@/lib/dataService';
 
 type FilterType = 'all' | 'unread' | 'read';
 
@@ -21,8 +21,25 @@ function formatDate(ts: string) {
 }
 
 export default function NotificationsScreen() {
-  const [notes, setNotes] = useState(initial.map((n) => ({ ...n })));
+  const [notes, setNotes] = useState<Notification[]>([]);
+  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<FilterType>('all');
+
+  useEffect(() => {
+    loadNotifications();
+  }, []);
+
+  const loadNotifications = async () => {
+    setLoading(true);
+    try {
+      const res = await dataService.getNotifications();
+      if (res.data) setNotes(res.data);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const unreadCount = notes.filter((n) => !n.read).length;
   const filtered = notes.filter((n) => {
@@ -31,10 +48,31 @@ export default function NotificationsScreen() {
     return true;
   });
 
-  const markRead = (id: string) =>
-    setNotes((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
-  const markAll = () => setNotes((prev) => prev.map((n) => ({ ...n, read: true })));
-  const remove = (id: string) => setNotes((prev) => prev.filter((n) => n.id !== id));
+  const markRead = async (id: string) => {
+    try {
+      await dataService.markNotificationRead(id);
+      setNotes((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const markAll = async () => {
+    const unread = notes.filter(n => !n.read);
+    for (const n of unread) {
+      await dataService.markNotificationRead(n.id);
+    }
+    setNotes((prev) => prev.map((n) => ({ ...n, read: true })));
+  };
+
+  const remove = async (id: string) => {
+    try {
+      await dataService.deleteNotification(id);
+      setNotes((prev) => prev.filter((n) => n.id !== id));
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   const getIconAndColors = (type: string) => {
     switch (type) {
@@ -83,7 +121,11 @@ export default function NotificationsScreen() {
       </View>
 
       {/* List */}
-      {filtered.length > 0 ? (
+      {loading ? (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 }}>
+          <Loader color="#2563EB" size={32} />
+        </View>
+      ) : filtered.length > 0 ? (
         filtered.map((notif) => {
           const meta = getIconAndColors(notif.type);
           return (
@@ -103,7 +145,7 @@ export default function NotificationsScreen() {
                   {!notif.read && <View style={styles.unreadDot} />}
                 </View>
                 <Text style={styles.notifMsg}>{notif.message}</Text>
-                <Text style={styles.notifTime}>{formatDate(notif.timestamp)}</Text>
+                <Text style={styles.notifTime}>{formatDate(notif.createdAt)}</Text>
               </View>
               <View style={styles.notifActions}>
                 {!notif.read && (

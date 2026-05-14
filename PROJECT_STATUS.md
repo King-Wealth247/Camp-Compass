@@ -117,12 +117,14 @@ Remaining work:
 - ✅ Timetable viewing page (`TimetablePage.tsx`) — week grid and list views, connected to backend
 - ✅ Student view — filtered by department and level
 - ✅ Staff view — filtered by instructor name
-- ✅ Admin view — full unfiltered timetable
-- ✅ Day/time display — week grid with time slots 08:00–17:00
-- ✅ Course details — title, code, hall name, instructor shown in grid cells
-- ❌ Hall name link to map (button present but not wired to map navigation)
-- ❌ Lecturer availability form and submission
-- ❌ Mid-week availability updates
+- ✅ Admin view — full timetable with department/level dropdown filters
+- ✅ Day/time display — weekly calendar grid with time slots 08:00–16:00
+- ✅ Course details — tap slot opens modal with course, hall, floor, lecturer, dept/level
+- ✅ Hall name link to map — "View on Floor Map" navigates to floor map with building/floor/hall pre-selected and highlighted
+- ✅ Mobile timetable (`TimetableScreen.tsx`) — same weekly grid, dept/level filtering, map deep-link
+- ✅ Mobile campus map (`CampusMapScreen.tsx`) — floor selector, accepts deep-link params, highlights target hall
+- ✅ Lecturer availability form (weekly grid UI)
+- ✅ Mid-week availability updates
 
 ---
 
@@ -131,22 +133,22 @@ Remaining work:
 ### 2.1 Backend Gaps
 - ❌ `GET /api/courses` — collection endpoint (only individual course by ID exists)
 - ❌ `GET /api/users` — collection endpoint (only individual user by ID exists)
-- ❌ Lecturer availability model and endpoints
+- ✅ Lecturer availability model and endpoints
 - ❌ Notification model and endpoints
 - ❌ Email service integration
 
 ### 2.2 Frontend Gaps
 - ❌ Hall CRUD admin UI (create/edit/delete forms in web frontend)
-- ❌ Lecturer availability form (weekly grid UI)
+- ✅ Lecturer availability form (weekly grid UI)
 - ❌ Profile page UI (backend endpoints exist, no frontend page)
 - ❌ Password change form (backend supports it, no UI)
 - ❌ Student/staff registration forms connected to backend
 - ❌ Notification UI logic (pages exist as stubs, no real data)
 
 ### 2.3 Mobile Gaps
-- ❌ Mobile screens are stubs — not connected to backend data
-- ❌ Campus map on mobile (screen exists, no map integration)
-- ❌ Timetable on mobile (screen exists, no backend connection)
+- ✅ Timetable on mobile — weekly calendar grid with filtering and map deep-link implemented
+- ✅ Campus map on mobile — floor selector and hall highlight from timetable deep-link implemented
+- ❌ Other mobile screens still use mock data (not connected to backend)
 
 ### 2.4 Infrastructure Gaps
 - ❌ Push notifications (FCM / Service Workers)
@@ -216,8 +218,10 @@ Remaining work:
 | Timetable viewing (web) | ✅ Complete |
 | User profile endpoints | ✅ Complete |
 | Hall CRUD admin UI | ❌ Missing |
-| Lecturer availability | ❌ Missing |
-| Mobile backend integration | ❌ Missing |
+| Lecturer availability | ✅ Complete |
+| Timetable viewing (mobile) | ✅ Complete |
+| Campus map floor nav (mobile) | ✅ Complete |
+| Other mobile backend integration | ❌ Missing |
 | Notification system | ❌ Missing |
 | Offline/PWA support | ❌ Missing |
 | Tests | ❌ Missing |
@@ -231,9 +235,11 @@ Remaining work:
 
 - [ ] Add `GET /api/courses` and `GET /api/users` collection endpoints to backend
 - [ ] Build hall CRUD admin UI (create/edit/delete forms in web frontend)
-- [ ] Build lecturer availability form (weekly grid) and submission endpoint
+- [x] Build lecturer availability form (weekly grid) and submission endpoint
 - [ ] Build profile page UI (backend endpoints already exist)
-- [ ] Connect mobile screens to backend (timetable, map, auth)
+- [x] Mobile timetable screen — weekly grid, filtering, map deep-link ✅
+- [x] Mobile campus map — floor selector, hall highlight ✅
+- [ ] Connect remaining mobile screens to backend (notifications, profile)
 - [ ] Add `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` to `camp-compass/.env.local` to enable live map
 - [ ] Implement notification stubs (in-app toast/banner)
 - [ ] Build student/staff registration forms connected to `/api/auth/register`

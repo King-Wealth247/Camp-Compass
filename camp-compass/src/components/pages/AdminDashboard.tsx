@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/app/context/AuthContext";
-import { Calendar, Building2, Users, AlertTriangle, CheckCircle, XCircle, Loader2 } from "lucide-react";
+import { Calendar, Building2, Users, AlertTriangle, CheckCircle, XCircle, Loader2, Send } from "lucide-react";
 import { halls, timetableData } from "@/app/data/mockData";
 import { dataService, Availability } from "@/lib/dataService";
+import { toast } from "sonner";
 
 export function AdminDashboard() {
   const { user } = useAuth();
@@ -10,6 +11,11 @@ export function AdminDashboard() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [resubmissions, setResubmissions] = useState<Availability[]>([]);
   const [loadingResubmissions, setLoadingResubmissions] = useState(true);
+  
+  // Broadcast State
+  const [broadcastTitle, setBroadcastTitle] = useState("");
+  const [broadcastMessage, setBroadcastMessage] = useState("");
+  const [broadcastSending, setBroadcastSending] = useState(false);
 
   useEffect(() => {
     loadResubmissions();
@@ -33,11 +39,33 @@ export function AdminDashboard() {
   const handleReviewResubmission = async (id: string, action: 'validate' | 'reject') => {
     try {
       await dataService.reviewAvailability(id, action);
-      // Refresh the list
+      toast.success(`Resubmission ${action}d successfully`);
       await loadResubmissions();
     } catch (error) {
       console.error("Failed to review resubmission:", error);
-      alert("Failed to process review. Please try again.");
+      toast.error("Failed to process review. Please try again.");
+    }
+  };
+
+  const handleSendBroadcast = async () => {
+    if (!broadcastTitle || !broadcastMessage) {
+      toast.error("Please provide both title and message");
+      return;
+    }
+    setBroadcastSending(true);
+    try {
+      const res = await dataService.sendBroadcastNotification({
+        title: broadcastTitle,
+        message: broadcastMessage,
+        type: 'info'
+      });
+      toast.success(res.data?.message || "Broadcast sent successfully");
+      setBroadcastTitle("");
+      setBroadcastMessage("");
+    } catch (error) {
+      toast.error("Failed to send broadcast");
+    } finally {
+      setBroadcastSending(false);
     }
   };
 
@@ -227,17 +255,41 @@ export function AdminDashboard() {
               </div>
             </a>
 
-            <button className="w-full flex items-center justify-between p-4 bg-orange-50 rounded-lg hover:bg-orange-100 transition text-left">
-              <div className="flex items-center gap-3">
+            <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mt-4">
+              <div className="flex items-center gap-3 mb-3">
                 <div className="w-10 h-10 bg-orange-600 rounded-lg flex items-center justify-center">
                   <Users className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <p className="font-semibold text-gray-900">Send Notification</p>
-                  <p className="text-sm text-gray-600">Alert students & staff</p>
+                  <p className="font-semibold text-gray-900">Send Broadcast</p>
+                  <p className="text-sm text-gray-600">Alert all users</p>
                 </div>
               </div>
-            </button>
+              <div className="space-y-3">
+                <input
+                  type="text"
+                  placeholder="Notification Title"
+                  value={broadcastTitle}
+                  onChange={(e) => setBroadcastTitle(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:ring-orange-500 focus:border-orange-500"
+                />
+                <textarea
+                  placeholder="Notification Message"
+                  value={broadcastMessage}
+                  onChange={(e) => setBroadcastMessage(e.target.value)}
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:ring-orange-500 focus:border-orange-500"
+                />
+                <button
+                  onClick={handleSendBroadcast}
+                  disabled={broadcastSending}
+                  className="w-full flex items-center justify-center gap-2 bg-orange-600 hover:bg-orange-700 text-white py-2 rounded transition disabled:opacity-60"
+                >
+                  {broadcastSending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                  Send Now
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>

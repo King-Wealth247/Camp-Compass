@@ -106,6 +106,16 @@ export interface Availability {
   };
 }
 
+export interface Notification {
+  id: string;
+  userId: string;
+  title: string;
+  message: string;
+  type: 'info' | 'warning' | 'success';
+  read: boolean;
+  createdAt: string;
+}
+
 function normalizeHall(raw: any): Hall {
   return {
     ...raw,
@@ -322,6 +332,26 @@ export class DataService {
 
   async reviewAvailability(id: string, action: 'validate' | 'reject'): Promise<ApiResponse<Availability>> {
     return apiClient.patch<Availability>(`/api/availability/${id}`, { action });
+  }
+  // Notification endpoints
+  async getNotifications(): Promise<ApiResponse<Notification[]>> {
+    return apiClient.get<Notification[]>('/api/notifications');
+  }
+
+  async markNotificationRead(id: string): Promise<ApiResponse<any>> {
+    return apiClient.patch<any>(`/api/notifications/${id}`, {});
+  }
+
+  async deleteNotification(id: string): Promise<ApiResponse<any>> {
+    return apiClient.delete(`/api/notifications/${id}`);
+  }
+
+  async sendBroadcastNotification(data: { title: string; message: string; type?: string; targetRole?: string }): Promise<ApiResponse<any>> {
+    return apiClient.post<any>('/api/notifications', data);
+  }
+
+  async saveFcmToken(token: string): Promise<ApiResponse<any>> {
+    return apiClient.post<any>('/api/users/fcm-token', { token });
   }
 }
 

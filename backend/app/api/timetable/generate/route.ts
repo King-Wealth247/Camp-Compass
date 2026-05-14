@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { sendPushNotification } from '@/lib/firebase-admin';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 
@@ -147,6 +148,26 @@ export async function POST(req: NextRequest) {
       })
     )
   );
+
+  // Trigger Notification
+  try {
+    const users = await prisma.user.findMany({ select: { id: true, fcmTokens: true } });
+    if (users.length > 0) {
+      const title = 'Timetable Updated';
+      const message = `A new timetable has been generated (${created.length} classes scheduled).`;
+      
+      await prisma.notification.createMany({
+        data: users.map(u => ({ userId: u.id, title, message, type: 'info' })),
+      });
+
+      const tokens = users.flatMap(u => u.fcmTokens).filter(Boolean);
+      if (tokens.length > 0) {
+        await sendPushNotification(tokens, title, message, { type: 'info' });
+      }
+    }
+  } catch (error) {
+    console.error('Failed to send timetable notification', error);
+  }
 
   return NextResponse.json({
     jobId: `generate-${Date.now()}`,

@@ -1,10 +1,29 @@
-import { useState } from "react";
-import { Bell, CheckCircle, Info, AlertTriangle, Trash2, Check } from "lucide-react";
-import { notifications as initialNotifications } from "@/app/data/mockData";
+import { useState, useEffect } from "react";
+import { Bell, CheckCircle, Info, AlertTriangle, Trash2, Check, Loader2 } from "lucide-react";
+import { dataService, Notification } from "@/lib/dataService";
 
 export function NotificationsPage() {
-  const [notifications, setNotifications] = useState(initialNotifications);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "unread" | "read">("all");
+
+  useEffect(() => {
+    loadNotifications();
+  }, []);
+
+  const loadNotifications = async () => {
+    setLoading(true);
+    try {
+      const response = await dataService.getNotifications();
+      if (response.data) {
+        setNotifications(response.data);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filteredNotifications = notifications.filter((notif) => {
     if (filter === "unread") return !notif.read;
@@ -14,18 +33,32 @@ export function NotificationsPage() {
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
-  const markAsRead = (id: string) => {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, read: true } : n))
-    );
+  const markAsRead = async (id: string) => {
+    try {
+      await dataService.markNotificationRead(id);
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === id ? { ...n, read: true } : n))
+      );
+    } catch (e) {
+      console.error(e);
+    }
   };
 
-  const markAllAsRead = () => {
+  const markAllAsRead = async () => {
+    const unread = notifications.filter(n => !n.read);
+    for (const n of unread) {
+      await dataService.markNotificationRead(n.id);
+    }
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
   };
 
-  const deleteNotification = (id: string) => {
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
+  const deleteNotification = async (id: string) => {
+    try {
+      await dataService.deleteNotification(id);
+      setNotifications((prev) => prev.filter((n) => n.id !== id));
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   const getIcon = (type: string) => {
@@ -132,8 +165,11 @@ export function NotificationsPage() {
         </div>
       </div>
 
-      {/* Notifications List */}
-      {filteredNotifications.length > 0 ? (
+      {loading ? (
+        <div className="flex items-center justify-center p-12">
+          <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+        </div>
+      ) : filteredNotifications.length > 0 ? (
         <div className="space-y-4">
           {filteredNotifications.map((notif) => (
             <div
@@ -187,7 +223,7 @@ export function NotificationsPage() {
                     </div>
 
                     <p className="text-xs text-gray-500">
-                      {formatDate(notif.timestamp)}
+                      {formatDate(notif.createdAt)}
                     </p>
                   </div>
                 </div>

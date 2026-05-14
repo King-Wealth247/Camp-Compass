@@ -64,22 +64,22 @@ A quick-reference matrix for implementation status and priorities.
 | Generate Button | ✅ | ✅ | - | ✅ | Admin dashboard trigger + endpoint |
 | Conflict Detection | ✅ | - | - | ✅ | Hall and instructor scheduling constraints enforced |
 | **Timetable Viewing** |
-| Student View | 🔄 | 🔄 | 🔄 | ❌ | Filtered by dept/level |
-| Staff View | 🔄 | 🔄 | 🔄 | ❌ | Personal schedule only |
-| Admin View | 🔄 | 🔄 | 🔄 | ❌ | Full timetable + edit |
-| Day/Time Display | ❌ | ❌ | ❌ | ❌ | Schedule grid |
-| Course Details | ❌ | ❌ | ❌ | ❌ | Popup/modal |
-| Hall Name Link | ❌ | ❌ | ❌ | ❌ | Maps integration |
+| Student View | ✅ | ✅ | ✅ | ✅ | Filtered by dept/level |
+| Staff View | ✅ | ✅ | ✅ | ✅ | Personal schedule only |
+| Admin View | ✅ | ✅ | ✅ | ✅ | Full timetable + dept/level filter |
+| Day/Time Display | ✅ | ✅ | ✅ | ✅ | Weekly calendar grid with time slots |
+| Course Details | ✅ | ✅ | ✅ | ✅ | Tap-to-open modal with full details |
+| Hall Name Link | ✅ | ✅ | ✅ | ✅ | Taps navigate to floor map with hall highlighted |
 | **Hall Management** |
 | Hall CRUD | ❌ | ❌ | - | ❌ | Admin dashboard |
 | Hall Search | ❌ | ❌ | 🔄 | ❌ | Multi-criteria |
 | Capacity Validation | ❌ | - | - | ❌ | Backend logic |
-| Availability Status | ❌ | ❌ | - | ❌ | Toggle UI + logic |
+| Availability Status | ✅ | ✅ | - | ✅ | Toggle UI + logic |
 | **Lecturer Availability** |
-| Availability Form | ❌ | ❌ | ❌ | ❌ | Weekly grid UI |
-| Availability Submission | ❌ | - | - | ❌ | API endpoint |
-| Mid-week Updates | ❌ | - | - | ❌ | Edit functionality |
-| Admin Notification | ❌ | ❌ | ❌ | ❌ | Notification trigger |
+| Availability Form | ✅ | ✅ | ❌ | ✅ | Weekly grid UI |
+| Availability Submission | ✅ | - | - | ✅ | API endpoint |
+| Mid-week Updates | ✅ | - | - | ✅ | Edit functionality |
+| Admin Notification | ✅ | ✅ | ❌ | ✅ | Notification trigger |
 
 **Priority:** 🟠 **HIGH** — Phase 3-4 deliverables
 
@@ -220,16 +220,16 @@ A quick-reference matrix for implementation status and priorities.
    - Effort: 7-10 days ✅ COMPLETE (estimated 6 hours)
 
 2. **Timetable Viewing**
-   - [ ] Display components
-   - [ ] Department/level filtering
-   - [ ] Map integration
-   - Effort: 4-5 days
+   - [x] Display components (weekly calendar grid)
+   - [x] Department/level filtering (admin dropdown filters; student/staff auto-filtered)
+   - [x] Map integration (tap slot → floor map with hall highlighted)
+   - Effort: 4-5 days ✅ COMPLETE
 
 3. **Availability Management**
-   - [ ] Availability form
-   - [ ] Submission logic
-   - [ ] Mid-week updates
-   - Effort: 3-4 days
+   - [x] Availability form
+   - [x] Submission logic
+   - [x] Mid-week updates
+   - Effort: 3-4 days ✅ COMPLETE
 
 ### 🟢 **PHASE 5-7 - LOWER PRIORITY (Start Week 6)**
 
@@ -344,4 +344,4 @@ Backend: Register endpoint → Frontend: LoginPage → Backend: Session → Dash
 
 ---
 
-**Last Updated:** May 7, 2026
+**Last Updated:** May 11, 2026
