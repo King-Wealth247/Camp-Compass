@@ -45,7 +45,7 @@ Camp-Compass has reached Phase 2 completion with a fully functional, integrated 
 ### 1.2 Authentication & User Management
 - ✅ JWT-based authentication implemented in backend
 - ✅ Login endpoint (`/api/auth/login`) with bcrypt password hashing
-- ✅ Register endpoint (`/api/auth/register`) for user creation
+- ✅ Register endpoint (`POST /api/auth/register`) — registrar/admin only; provisions student/staff with generated institutional email and password
 - ✅ Session management utilities and token lifecycle control
 - ✅ RBAC proxy middleware (`backend/proxy.ts`) for role-based access enforcement
 - ✅ Auth verification endpoint (`/api/auth/me`)
@@ -54,7 +54,7 @@ Camp-Compass has reached Phase 2 completion with a fully functional, integrated 
 - ✅ Role-based dashboard components for Student, Staff, Admin, and Registrar
 - ✅ Database seeded with test users for all roles
 - ✅ User profile GET/PUT/DELETE endpoints (`/api/users/[id]`) with role-based access
-- ❌ User registration/onboarding workflows UI (form not connected to backend)
+- ✅ Registrar onboarding UI (`RegistrarDashboard.tsx`) — student/staff toggle, institutions from DB, `POST /api/auth/register`, generated credentials surfaced via toasts
 - ❌ Password change UI (backend supports it via PUT /api/users/[id], no frontend form)
 - ❌ Tuition gate access control logic
 
@@ -63,26 +63,27 @@ Camp-Compass has reached Phase 2 completion with a fully functional, integrated 
 - ✅ `backend/prisma/schema.prisma` — complete Prisma models for users, institutions, campuses, buildings, halls, courses, and timetables
 - ✅ PostgreSQL database migrated and initialized
 - ✅ All API route handlers implemented:
-  - Auth: `POST /api/auth/login`, `POST /api/auth/register`, `GET /api/auth/me`
+  - Auth: `POST /api/auth/login`, `POST /api/auth/register` (registrar/admin), `GET /api/auth/me`
+  - Institutions: `GET /api/institutions` (registrar/admin)
   - Health: `GET /api/health`
   - Halls: `GET/POST /api/halls`, `GET/PUT/DELETE /api/halls/[id]`, `GET /api/halls/search`
   - Buildings: `GET/POST /api/buildings`, `GET/PUT/DELETE /api/buildings/[id]`
   - Campuses: `GET/POST /api/campuses`, `GET/PUT/DELETE /api/campuses/[id]`
   - Courses: `GET/PUT/DELETE /api/courses/[id]`
   - Timetable: `GET/POST /api/timetable`, `GET/PUT/DELETE /api/timetable/[id]`, `POST /api/timetable/generate`
-  - Users: `GET/PUT/DELETE /api/users/[id]`
+  - Users: `GET /api/users`, `GET/PUT/DELETE /api/users/[id]`
 - ✅ RBAC proxy middleware for token validation and role-based route access
 - ✅ Session and RBAC utility libraries
 - ✅ Environment configuration (`.env`) with database and JWT secrets
 - ❌ Courses list endpoint (`GET /api/courses` — only `[id]` exists, no collection route)
-- ❌ Users list endpoint (`GET /api/users` — only `[id]` exists, no collection route)
+- ✅ Users list endpoint (`GET /api/users`)
 - ❌ Email service integration
 - ❌ Production deployment configuration
 
 ### 1.4 Frontend API Integration
 - ✅ Web API client (`camp-compass/src/lib/api.ts`) — full HTTP methods, error handling, token management, timeout/abort
 - ✅ Auth service for web (`camp-compass/src/lib/authService.ts`)
-- ✅ Data service for web (`camp-compass/src/lib/dataService.ts`) — halls, buildings, campuses, courses, timetables, timetable generation
+- ✅ Data service for web (`camp-compass/src/lib/dataService.ts`) — halls, buildings, campuses, institutions, courses, timetables, timetable generation
 - ✅ Mobile API client (`camp-compass-mobile/lib/api.ts`) — AsyncStorage token persistence, same error handling patterns
 - ✅ Auth service for mobile (`camp-compass-mobile/lib/authService.ts`)
 - ✅ Data service for mobile (`camp-compass-mobile/lib/dataService.ts`)
@@ -133,7 +134,7 @@ Camp-Compass has reached Phase 2 completion with a fully functional, integrated 
 
 ### 2.1 Backend Gaps
 - ❌ `GET /api/courses` — collection endpoint (only individual course by ID exists)
-- ❌ `GET /api/users` — collection endpoint (only individual user by ID exists)
+- ✅ `GET /api/users` — collection endpoint (registrar/admin)
 - ✅ Lecturer availability model and endpoints
 - ❌ Notification model and endpoints
 - ❌ Email service integration
@@ -143,7 +144,7 @@ Camp-Compass has reached Phase 2 completion with a fully functional, integrated 
 - ✅ Lecturer availability form (weekly grid UI)
 - ❌ Profile page UI (backend endpoints exist, no frontend page)
 - ❌ Password change form (backend supports it, no UI)
-- ❌ Student/staff registration forms connected to backend
+- ✅ Student/staff registration (registrar web dashboard + `POST /api/auth/register`)
 - ❌ Notification UI logic (pages exist as stubs, no real data)
 
 ### 2.3 Mobile Gaps
@@ -166,12 +167,13 @@ Camp-Compass has reached Phase 2 completion with a fully functional, integrated 
 ### Web App (`camp-compass/`)
 - `package.json` — Next.js 16.2.1, React 19.2.4, Tailwind CSS 4, Radix UI, React Hook Form, Recharts, Sonner, Lucide React
 - `src/lib/api.ts` — Fully featured API client
-- `src/lib/authService.ts` — Login, register, token management
-- `src/lib/dataService.ts` — Halls, buildings, campuses, courses, timetables, timetable generation
+- `src/lib/authService.ts` — Login, `registerByRegistrar` (JWT to `/api/auth/register`), token management
+- `src/lib/dataService.ts` — Halls, buildings, campuses, institutions, courses, timetables, timetable generation
 - `src/components/pages/CampusMapPage.tsx` — Google Maps + building CRUD + floor plan renderer
 - `src/components/pages/HallSearchPage.tsx` — Live backend data, multi-criteria filtering
 - `src/components/pages/TimetablePage.tsx` — Week/list views, role-filtered, live backend data
 - `src/components/pages/AdminDashboard.tsx` — Timetable generation trigger wired to backend
+- `src/components/pages/RegistrarDashboard.tsx` — Registrar student/staff registration wired to backend
 
 ### Mobile App (`camp-compass-mobile/`)
 - `package.json` — Expo SDK 54, React Native 0.81.5, AsyncStorage, Expo Router 6
@@ -218,6 +220,7 @@ Camp-Compass has reached Phase 2 completion with a fully functional, integrated 
 | Timetable generation (backend) | ✅ Complete |
 | Timetable viewing (web) | ✅ Complete |
 | User profile endpoints | ✅ Complete |
+| Registrar onboarding (web + API) | ✅ Complete |
 | Hall CRUD admin UI | ❌ Missing |
 | Lecturer availability | ✅ Complete |
 | Timetable viewing (mobile) | ✅ Complete |
@@ -243,7 +246,7 @@ Camp-Compass has reached Phase 2 completion with a fully functional, integrated 
 - [ ] Connect remaining mobile screens to backend (notifications, profile)
 - [ ] Add `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` to `camp-compass/.env.local` to enable live map
 - [ ] Implement notification stubs (in-app toast/banner)
-- [ ] Build student/staff registration forms connected to `/api/auth/register`
+- [x] Build student/staff registration forms connected to `/api/auth/register` (registrar dashboard + institutions API)
 
 ---
 

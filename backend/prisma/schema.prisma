@@ -97,9 +97,11 @@ model User {
   email          String         @unique
   password       String
   name           String
+  phone          String?
   role           UserRole       @default(student)
   department     String?
   level          String?
+  courseTaught   String?
   tuitionPaid    Boolean        @default(false)
   institution    Institution    @relation(fields: [institutionId], references: [id])
   institutionId  String

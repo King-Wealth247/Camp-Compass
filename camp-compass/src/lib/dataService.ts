@@ -63,12 +63,19 @@ export interface User {
   id: string;
   email: string;
   name: string;
+  phone?: string | null;
   role: string;
   department?: string;
   level?: string;
+  courseTaught?: string | null;
   tuitionPaid: boolean;
   institutionId: string;
   createdAt: string;
+}
+
+export interface Institution {
+  id: string;
+  name: string;
 }
 
 export interface Timetable {
@@ -245,6 +252,10 @@ export class DataService {
   }
 
   // User endpoints
+  async getInstitutions(): Promise<ApiResponse<Institution[]>> {
+    return apiClient.get<Institution[]>('/api/institutions');
+  }
+
   async getUsers(): Promise<ApiResponse<User[]>> {
     return apiClient.get<User[]>('/api/users');
   }

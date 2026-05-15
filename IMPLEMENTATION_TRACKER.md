@@ -248,17 +248,17 @@
 
 | Feature | Status | Web | Mobile | Backend | Notes |
 |---------|--------|-----|--------|---------|-------|
-| Registrar Dashboard | 🔄 | 🔄 | 🔄 | - | Empty stub |
-| Student Registration | ❌ | ❌ | - | ❌ | Form + logic |
-| Staff Registration | ❌ | ❌ | - | ❌ | Form + logic |
+| Registrar Dashboard | ✅ | ✅ | ❌ | ✅ | Student/staff toggle, institutions dropdown, wired to API |
+| Student Registration | ✅ | ✅ | ❌ | ✅ | Via registrar; tuition + level; auto email/password |
+| Staff Registration | ✅ | ✅ | ❌ | ✅ | Via registrar; course taught; auto email/password |
 | Bulk Import | ❌ | ❌ | - | ❌ | CSV upload |
-| Auto-Generate Credentials | ❌ | - | - | ❌ | Email + password logic |
+| Auto-Generate Credentials | ✅ | - | - | ✅ | Institutional email + secure password (returned once in API/UI) |
 | Welcome Email | ❌ | - | - | ❌ | Email service |
 | Credential Delivery | ❌ | - | - | ❌ | Email/SMS |
 
 **Priority:** 🟡 **MEDIUM** — Phase 1 end / Phase 2
 
-**Blockers:** Backend, Email service setup
+**Blockers:** Optional welcome email / SMS (credentials shown in UI and API response today)
 
 ---
 
@@ -283,7 +283,7 @@
 
 | Component | Status | Details |
 |-----------|--------|---------|
-| **Backend** | ✅ | Next.js scaffold with auth routes + middleware |
+| **Backend** | ✅ | Next.js scaffold with auth routes + `proxy.ts` RBAC |
 | **Database** | ✅ | PostgreSQL schema migrated and initialized |
 | **ORM** | ✅ | Prisma configured with client generation |
 | **API Endpoints** | 🔄 | Auth (login/register/me) + halls routes implemented |
