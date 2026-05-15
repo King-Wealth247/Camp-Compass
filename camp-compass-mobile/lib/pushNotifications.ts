@@ -1,18 +1,26 @@
 import * as Device from 'expo-device';
-import * as Notifications from 'expo-notifications';
+import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import { dataService } from './dataService';
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-  }),
-});
-
 export async function registerForPushNotificationsAsync() {
+  if (Constants?.appOwnership === 'expo') {
+    console.log('Skipping push notification registration in Expo Go.');
+    return;
+  }
+
   let token;
+  const Notifications = await import('expo-notifications');
+
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowAlert: true,
+      shouldShowBanner: true,
+      shouldShowList: true,
+      shouldPlaySound: true,
+      shouldSetBadge: true,
+    }),
+  });
 
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync('default', {
@@ -36,11 +44,9 @@ export async function registerForPushNotificationsAsync() {
     }
 
     try {
-      // For real use, configure projectId in app.json. We'll use getExpoPushTokenAsync.
       token = (await Notifications.getExpoPushTokenAsync()).data;
       console.log('Expo Push Token:', token);
       
-      // Save it to the backend
       if (token) {
         await dataService.saveFcmToken(token);
       }

@@ -2,11 +2,14 @@ import { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { AuthProvider } from '@/context/AuthContext';
-import { registerForPushNotificationsAsync } from '@/lib/pushNotifications';
 
 export default function RootLayout() {
   useEffect(() => {
-    registerForPushNotificationsAsync();
+    async function register() {
+      const { registerForPushNotificationsAsync } = await import('@/lib/pushNotifications');
+      await registerForPushNotificationsAsync();
+    }
+    register();
   }, []);
 
   return (
