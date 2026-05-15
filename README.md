@@ -133,6 +133,17 @@ npm run dev  # Start backend on http://localhost:3001
 ```bash
 cd camp-compass
 npm install --legacy-peer-deps
+```
+
+Create `camp-compass/.env.local` with:
+```env
+NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your_google_maps_api_key_here
+# NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:3001
+```
+Replace `your_google_maps_api_key_here` with your actual Google Maps API key to enable live map rendering.
+
+Then run:
+```bash
 npm run dev  # Start on http://localhost:3000
 ```
 
@@ -347,6 +358,7 @@ The project has evolved significantly from Phase 1 infrastructure to Phase 2 wit
 - Timetable generation with constraint solver
 - Availability model + submission/review endpoints
 - Notification system with Firebase integration
+- Broadcast notifications persisted with a dedicated broadcast flag
 - User profile endpoints with role-based access
 - Multi-institutional data isolation
 

@@ -34,6 +34,7 @@
 - Web frontend (12+ pages with live data)
 - Timetable generation + viewing (with constraint solver)
 - Campus mapping (Google Maps + building/floor CRUD)
+- ✅ Google Maps API env var configured in `camp-compass/.env.local`
 - Hall management (search + CRUD operations)
 - User management (registration + profile + role-based)
 - Lecturer availability (form + admin review workflow)
@@ -229,12 +230,12 @@
 
 | Feature | Status | Web | Mobile | Backend | Notes |
 |---------|--------|-----|--------|---------|-------|
-| Notification UI | 🔄 | 🔄 | 🔄 | - | Pages created, no logic |
+| Notification UI | ✅ | ✅ | ✅ | ✅ | Live backend notification center |
 | In-app Notifications | ❌ | ❌ | ❌ | ❌ | Toast/banner component |
 | Push Notifications | ❌ | ❌ | ❌ | ❌ | FCM + Service Workers |
 | Timetable Change Alert | ❌ | ❌ | ❌ | ❌ | Trigger logic |
 | Availability Change Alert | ❌ | ❌ | ❌ | ❌ | Admin notification |
-| System Announcements | ❌ | ❌ | ❌ | ❌ | Admin broadcast |
+| System Announcements | ✅ | ✅ | ✅ | ✅ | Admin broadcast now stored and delivered |
 | Correction Request Status | ❌ | ❌ | ❌ | ❌ | Approval notification |
 | Notification Badge | ❌ | ❌ | ❌ | ❌ | Unread count |
 

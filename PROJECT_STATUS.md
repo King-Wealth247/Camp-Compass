@@ -101,7 +101,7 @@ Camp-Compass has reached Phase 2 completion with a fully functional, integrated 
 - ✅ Room/hall labels — halls displayed on floor plan with name and capacity
 - ✅ Hall details — capacity and availability shown in floor room list
 - ❌ Hall details popup/modal (inline display only, no dedicated modal)
-- ❌ Google Maps API key not yet configured (requires `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` in `.env.local`)
+- ✅ Google Maps API key configured in `camp-compass/.env.local`
 
 ### 1.6 Hall Management (Web)
 - ✅ Hall search page (`HallSearchPage.tsx`) — connected to backend, live data
@@ -136,7 +136,7 @@ Camp-Compass has reached Phase 2 completion with a fully functional, integrated 
 - ❌ `GET /api/courses` — collection endpoint (only individual course by ID exists)
 - ✅ `GET /api/users` — collection endpoint (registrar/admin)
 - ✅ Lecturer availability model and endpoints
-- ❌ Notification model and endpoints
+- ✅ Notification model and endpoints
 - ❌ Email service integration
 
 ### 2.2 Frontend Gaps
@@ -145,7 +145,7 @@ Camp-Compass has reached Phase 2 completion with a fully functional, integrated 
 - ❌ Profile page UI (backend endpoints exist, no frontend page)
 - ❌ Password change form (backend supports it, no UI)
 - ✅ Student/staff registration (registrar web dashboard + `POST /api/auth/register`)
-- ❌ Notification UI logic (pages exist as stubs, no real data)
+- ✅ Notification UI logic (pages now fetch live backend notifications)
 
 ### 2.3 Mobile Gaps
 - ✅ Timetable on mobile — weekly calendar grid with filtering and map deep-link implemented
@@ -244,7 +244,7 @@ Camp-Compass has reached Phase 2 completion with a fully functional, integrated 
 - [x] Mobile timetable screen — weekly grid, filtering, map deep-link ✅
 - [x] Mobile campus map — floor selector, hall highlight ✅
 - [ ] Connect remaining mobile screens to backend (notifications, profile)
-- [ ] Add `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` to `camp-compass/.env.local` to enable live map
+- [x] Add `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` to `camp-compass/.env.local` to enable live map
 - [ ] Implement notification stubs (in-app toast/banner)
 - [x] Build student/staff registration forms connected to `/api/auth/register` (registrar dashboard + institutions API)
 

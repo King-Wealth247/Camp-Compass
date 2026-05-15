@@ -139,6 +139,7 @@ model Notification {
   title     String
   message   String
   type      String   @default("info")
+  broadcast Boolean  @default(false)
   read      Boolean  @default(false)
   createdAt DateTime @default(now())
 }

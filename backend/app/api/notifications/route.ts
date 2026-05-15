@@ -21,7 +21,12 @@ export async function GET(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const notifications = await prisma.notification.findMany({
-    where: { userId: user.sub },
+    where: {
+      OR: [
+        { userId: user.sub },
+        { broadcast: true },
+      ],
+    },
     orderBy: { createdAt: 'desc' },
   });
 
@@ -52,12 +57,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ message: 'No users found for broadcast' });
   }
 
-  // Create notifications in DB
+  // Create notifications in DB and mark them as broadcast messages
   const notificationsData = users.map((u) => ({
     userId: u.id,
     title,
     message,
     type,
+    broadcast: true,
   }));
 
   await prisma.notification.createMany({
