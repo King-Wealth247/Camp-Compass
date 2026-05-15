@@ -195,6 +195,11 @@ export function NotificationsPage() {
                           <h3 className="font-semibold text-gray-900">
                             {notif.title}
                           </h3>
+                          {notif.broadcast && (
+                            <span className="inline-flex items-center px-2 py-0.5 text-[11px] font-semibold text-blue-700 bg-blue-100 rounded-full">
+                              Broadcast
+                            </span>
+                          )}
                           {!notif.read && (
                             <span className="w-2 h-2 bg-blue-600 rounded-full"></span>
                           )}

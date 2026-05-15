@@ -71,7 +71,7 @@ export default function AdminDashboard() {
         <Text style={styles.cardTitle}>Management Tools</Text>
         {[
           { label: 'Generate New Timetable', sub: "Create next week's schedule", color: '#EFF6FF', iconBg: '#2563EB', icon: Calendar, route: '/(app)/admin/timetable' },
-          { label: 'Hall Search & Management', sub: 'Find and manage halls', color: '#F0FDF4', iconBg: '#16A34A', icon: Building2, route: '/(app)/admin/map' },
+          { label: 'Facilities Infrastructure', sub: 'Manage campuses & buildings', color: '#F0FDF4', iconBg: '#16A34A', icon: Building2, route: '/(app)/admin/facilities' },
           { label: 'View All Timetables', sub: 'Browse all schedules', color: '#FAF5FF', iconBg: '#7C3AED', icon: Calendar, route: '/(app)/admin/timetable' },
           { label: 'Send Notification', sub: 'Alert students & staff', color: '#FFF7ED', iconBg: '#EA580C', icon: Users, route: '/(app)/admin/dashboard' },
         ].map((item) => (

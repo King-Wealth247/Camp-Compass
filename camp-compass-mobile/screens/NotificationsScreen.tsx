@@ -142,6 +142,11 @@ export default function NotificationsScreen() {
               <View style={styles.notifBody}>
                 <View style={styles.notifTitleRow}>
                   <Text style={styles.notifTitle}>{notif.title}</Text>
+                  {notif.broadcast && (
+                    <View style={styles.broadcastBadge}>
+                      <Text style={styles.broadcastBadgeText}>Broadcast</Text>
+                    </View>
+                  )}
                   {!notif.read && <View style={styles.unreadDot} />}
                 </View>
                 <Text style={styles.notifMsg}>{notif.message}</Text>
@@ -241,6 +246,17 @@ const styles = StyleSheet.create({
   notifBody: { flex: 1 },
   notifTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 3 },
   notifTitle: { fontSize: 14, fontWeight: '700', color: '#111827' },
+  broadcastBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 999,
+    backgroundColor: '#DBEAFE',
+  },
+  broadcastBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#1D4ED8',
+  },
   unreadDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#2563EB' },
   notifMsg: { fontSize: 13, color: '#6B7280', lineHeight: 18, marginBottom: 4 },
   notifTime: { fontSize: 11, color: '#9CA3AF' },

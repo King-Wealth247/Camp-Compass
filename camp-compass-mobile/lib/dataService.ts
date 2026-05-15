@@ -60,6 +60,7 @@ export interface Notification {
   title: string;
   message: string;
   type: 'info' | 'warning' | 'success';
+  broadcast: boolean;
   read: boolean;
   createdAt: string;
 }
@@ -91,6 +92,81 @@ export class DataService {
       response.data = normalizeHall(response.data);
     }
     return response as ApiResponse<Hall>;
+  }
+
+  async createHall(data: Omit<Hall, 'id' | 'createdAt'>): Promise<ApiResponse<Hall>> {
+    const payload = {
+      ...data,
+      isAvailable: data.available,
+    };
+    const response = await apiClient.post<any>('/api/halls', payload);
+    if (response.data) {
+      response.data = normalizeHall(response.data);
+    }
+    return response as ApiResponse<Hall>;
+  }
+
+  async updateHall(id: string, data: Partial<Hall>): Promise<ApiResponse<Hall>> {
+    const payload = {
+      ...data,
+      isAvailable: data.available,
+    };
+    const response = await apiClient.put<any>(`/api/halls/${id}`, payload);
+    if (response.data) {
+      response.data = normalizeHall(response.data);
+    }
+    return response as ApiResponse<Hall>;
+  }
+
+  async deleteHall(id: string): Promise<ApiResponse<{ message: string }>> {
+    return apiClient.delete(`/api/halls/${id}`);
+  }
+
+  // Campus endpoints
+  async getCampuses(): Promise<ApiResponse<any[]>> {
+    return apiClient.get<any[]>('/api/campuses');
+  }
+
+  async getCampus(id: string): Promise<ApiResponse<any>> {
+    return apiClient.get<any>(`/api/campuses/${id}`);
+  }
+
+  async createCampus(data: any): Promise<ApiResponse<any>> {
+    return apiClient.post<any>('/api/campuses', data);
+  }
+
+  async updateCampus(id: string, data: any): Promise<ApiResponse<any>> {
+    return apiClient.put<any>(`/api/campuses/${id}`, data);
+  }
+
+  async deleteCampus(id: string): Promise<ApiResponse<{ message: string }>> {
+    return apiClient.delete(`/api/campuses/${id}`);
+  }
+
+  // Building endpoints
+  async getBuildings(): Promise<ApiResponse<any[]>> {
+    return apiClient.get<any[]>('/api/buildings');
+  }
+
+  async getBuilding(id: string): Promise<ApiResponse<any>> {
+    return apiClient.get<any>(`/api/buildings/${id}`);
+  }
+
+  async createBuilding(data: any): Promise<ApiResponse<any>> {
+    return apiClient.post<any>('/api/buildings', data);
+  }
+
+  async updateBuilding(id: string, data: any): Promise<ApiResponse<any>> {
+    return apiClient.put<any>(`/api/buildings/${id}`, data);
+  }
+
+  async deleteBuilding(id: string): Promise<ApiResponse<{ message: string }>> {
+    return apiClient.delete(`/api/buildings/${id}`);
+  }
+
+  // Institution endpoints
+  async getInstitutions(): Promise<ApiResponse<any[]>> {
+    return apiClient.get<any[]>('/api/institutions');
   }
 
   // Course endpoints

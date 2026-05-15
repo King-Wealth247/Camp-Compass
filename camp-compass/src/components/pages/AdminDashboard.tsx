@@ -234,8 +234,23 @@ export function AdminDashboard() {
                   <Building2 className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <p className="font-semibold text-gray-900">Hall Search & Management</p>
-                  <p className="text-sm text-gray-600">Find and manage halls</p>
+                  <p className="font-semibold text-gray-900">Hall Search</p>
+                  <p className="text-sm text-gray-600">Find available halls</p>
+                </div>
+              </div>
+            </a>
+
+            <a
+              href="/dashboard/admin/facilities"
+              className="w-full flex items-center justify-between p-4 bg-teal-50 rounded-lg hover:bg-teal-100 transition"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-teal-600 rounded-lg flex items-center justify-center">
+                  <Building2 className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <p className="font-semibold text-gray-900">Facilities Infrastructure</p>
+                  <p className="text-sm text-gray-600">Manage Campuses & Buildings</p>
                 </div>
               </div>
             </a>

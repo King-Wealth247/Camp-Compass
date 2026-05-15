@@ -119,6 +119,7 @@ export interface Notification {
   title: string;
   message: string;
   type: 'info' | 'warning' | 'success';
+  broadcast: boolean;
   read: boolean;
   createdAt: string;
 }
