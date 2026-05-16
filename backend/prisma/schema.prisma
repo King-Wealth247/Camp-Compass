@@ -39,7 +39,6 @@ model Campus {
   institution   Institution  @relation(fields: [institutionId], references: [id])
   institutionId String
   buildings     Building[]
-  timetables    Timetable[]
   departments   Department[] // mainCampus relation
   createdAt     DateTime     @default(now())
 }
@@ -54,6 +53,7 @@ model Department {
   levels         Level[]
   users          User[]
   courses        Course[]
+  timetables     Timetable[]
 }
 
 model Level {
@@ -63,6 +63,7 @@ model Level {
   level        Int
   users        User[]
   courses      Course[]
+  timetables   Timetable[]
 }
 
 model Building {
@@ -97,7 +98,7 @@ model Hall {
   floor       Int?
   building    Building    @relation(fields: [buildingId], references: [id])
   buildingId  String
-  timetables  Timetable[]
+  timetableSubComponents TimetableSubComponent[]
   isAvailable Boolean     @default(true)
   createdAt   DateTime    @default(now())
 }
@@ -115,22 +116,37 @@ model Course {
   instructorId  String
   instructorRef User        @relation(fields: [instructorId], references: [id])
   instructor    String
-  timetables    Timetable[]
+  timetableSubComponents TimetableSubComponent[]
   createdAt     DateTime    @default(now())
 }
 
 model Timetable {
-  id        String   @id @default(cuid())
-  campus    Campus   @relation(fields: [campusId], references: [id])
-  campusId  String
-  course    Course   @relation(fields: [courseId], references: [id])
-  courseId  String
-  hall      Hall     @relation(fields: [hallId], references: [id])
-  hallId    String
-  startTime DateTime
-  endTime   DateTime
-  day       String
-  createdAt DateTime @default(now())
+  id            String                  @id @default(cuid())
+  departmentId  String
+  department    Department              @relation(fields: [departmentId], references: [id])
+  levelId       String
+  levelRef      Level                   @relation(fields: [levelId], references: [id])
+  level         Int
+  createdAt     DateTime                @default(now())
+  subComponents TimetableSubComponent[]
+}
+
+model TimetableSubComponent {
+  id          String    @id @default(cuid())
+  courseId    String
+  courseRef   Course    @relation(fields: [courseId], references: [id])
+  course      String
+  instructor  String
+  hallId      String
+  hallRef     Hall      @relation(fields: [hallId], references: [id])
+  hall        String
+  floor       Int?
+  startTime   DateTime
+  endTime     DateTime
+  day         String
+  timetableId String
+  timetable   Timetable @relation(fields: [timetableId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
 }
 
 model User {

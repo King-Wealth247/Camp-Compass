@@ -9,9 +9,14 @@ export async function GET(
   const timetable = await prisma.timetable.findUnique({
     where: { id },
     include: {
-      course: true,
-      hall: { include: { building: { include: { campus: true } } } },
-      campus: true,
+      department: true,
+      levelRef: true,
+      subComponents: {
+        include: {
+          courseRef: true,
+          hallRef: { include: { building: { include: { campus: true } } } }
+        }
+      }
     },
   });
 
@@ -29,20 +34,20 @@ export async function PUT(
   const { id } = await params;
   const body = await req.json();
 
+  // For PUT, usually you'd update specific properties or replace subcomponents.
+  // For simplicity, we just update the root fields here. 
+  // Updating subcomponents requires deletion/re-creation or matching by ID.
   const timetable = await prisma.timetable.update({
     where: { id },
     data: {
-      campusId: body.campusId,
-      courseId: body.courseId,
-      hallId: body.hallId,
-      startTime: body.startTime ? new Date(body.startTime) : undefined,
-      endTime: body.endTime ? new Date(body.endTime) : undefined,
-      day: body.day,
+      departmentId: body.departmentId,
+      levelId: body.levelId,
+      level: body.level !== undefined ? parseInt(body.level) : undefined,
     },
     include: {
-      course: true,
-      hall: { include: { building: { include: { campus: true } } } },
-      campus: true,
+      department: true,
+      levelRef: true,
+      subComponents: true,
     },
   });
 
@@ -54,6 +59,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
+  // SubComponents have onDelete: Cascade, so deleting the Timetable deletes them.
   await prisma.timetable.delete({ where: { id } });
   return NextResponse.json({ message: 'Timetable entry deleted successfully' });
 }

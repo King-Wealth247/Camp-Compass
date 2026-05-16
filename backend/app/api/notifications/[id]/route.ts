@@ -14,12 +14,13 @@ const getUser = (req: NextRequest) => {
 
 // PATCH /api/notifications/[id]
 // Mark notification as read
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const user = getUser(req);
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const { id } = await params;
 
   const notification = await prisma.notification.findUnique({
-    where: { id: params.id },
+    where: { id },
   });
 
   if (!notification) {
@@ -31,7 +32,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   }
 
   const updated = await prisma.notification.update({
-    where: { id: params.id },
+    where: { id },
     data: { read: true },
   });
 
@@ -40,12 +41,13 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
 // DELETE /api/notifications/[id]
 // Delete a notification
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const user = getUser(req);
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const { id } = await params;
 
   const notification = await prisma.notification.findUnique({
-    where: { id: params.id },
+    where: { id },
   });
 
   if (!notification) {
@@ -57,7 +59,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
   }
 
   await prisma.notification.delete({
-    where: { id: params.id },
+    where: { id },
   });
 
   return NextResponse.json({ message: 'Deleted successfully' });

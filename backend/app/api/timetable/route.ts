@@ -2,35 +2,43 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
 export async function GET(req: NextRequest) {
-  const department = req.nextUrl.searchParams.get('department');
-  const level = req.nextUrl.searchParams.get('level');
+  const departmentId = req.nextUrl.searchParams.get('departmentId');
+  const levelId = req.nextUrl.searchParams.get('levelId');
   const instructor = req.nextUrl.searchParams.get('instructor');
 
-  let where: any = undefined;
+  const where: any = {};
 
-  if (department || level || instructor) {
-    where = { course: {} };
+  if (departmentId) {
+    where.departmentId = departmentId;
+  }
 
-    if (department) {
-      where.course.department = department;
-    }
+  if (levelId) {
+    where.levelId = levelId;
+  }
 
-    if (level) {
-      where.course.level = level;
-    }
-
-    if (instructor) {
-      where.course.instructor = instructor;
-    }
+  if (instructor) {
+    where.subComponents = {
+      some: {
+        instructor: instructor
+      }
+    };
   }
 
   const timetables = await prisma.timetable.findMany({
     where,
     include: {
-      course: true,
-      hall: { include: { building: { include: { campus: true } } } },
-      campus: true,
+      department: true,
+      levelRef: true,
+      subComponents: {
+        include: {
+          courseRef: true,
+          hallRef: { include: { building: { include: { campus: true } } } }
+        }
+      }
     },
+    orderBy: {
+      createdAt: 'desc'
+    }
   });
 
   return NextResponse.json(timetables);
@@ -41,17 +49,32 @@ export async function POST(req: NextRequest) {
 
   const timetable = await prisma.timetable.create({
     data: {
-      campusId: body.campusId,
-      courseId: body.courseId,
-      hallId: body.hallId,
-      startTime: new Date(body.startTime),
-      endTime: new Date(body.endTime),
-      day: body.day,
+      departmentId: body.departmentId,
+      levelId: body.levelId,
+      level: parseInt(body.level),
+      subComponents: {
+        create: body.subComponents?.map((sub: any) => ({
+          courseId: sub.courseId,
+          course: sub.course,
+          instructor: sub.instructor,
+          hallId: sub.hallId,
+          hall: sub.hall,
+          floor: sub.floor !== undefined ? parseInt(sub.floor) : null,
+          startTime: new Date(sub.startTime),
+          endTime: new Date(sub.endTime),
+          day: sub.day
+        })) || []
+      }
     },
     include: {
-      course: true,
-      hall: { include: { building: { include: { campus: true } } } },
-      campus: true,
+      department: true,
+      levelRef: true,
+      subComponents: {
+        include: {
+          courseRef: true,
+          hallRef: { include: { building: { include: { campus: true } } } }
+        }
+      }
     },
   });
 

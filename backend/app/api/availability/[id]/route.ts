@@ -25,7 +25,8 @@ function getWeekStart() {
 
 // PATCH /api/availability/[id]  — admin validates or rejects a resubmission
 // Body: { action: 'validate' | 'reject' }
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const body = await req.json();
   const { action } = body;
 
@@ -34,7 +35,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   }
 
   const availability = await prisma.availability.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: { lecturer: true },
   });
 
@@ -44,91 +45,16 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
   // Update the resubmission status
   const updated = await prisma.availability.update({
-    where: { id: params.id },
+    where: { id },
     data: { resubmission: action === 'validate' ? 'validated' : 'rejected' },
     include: { lecturer: { select: { id: true, name: true, email: true } } },
   });
 
-  // If validated, regenerate timetable entries for this lecturer only
+  // If validated, prompt the admin to regenerate the timetable
   if (action === 'validate') {
-    const instructorName = availability.lecturer.name;
-
-    // Delete existing timetable entries for this lecturer
-    const lecturerCourses = await prisma.course.findMany({
-      where: { instructor: instructorName },
-    });
-    const courseIds = lecturerCourses.map((c) => c.id);
-
-    await prisma.timetable.deleteMany({ where: { courseId: { in: courseIds } } });
-
-    // Build availability map for this lecturer
-    const availMap: Record<string, number[]> = {
-      Monday: allowedHours(availability.mondayTime),
-      Tuesday: allowedHours(availability.tuesdayTime),
-      Wednesday: allowedHours(availability.wednesdayTime),
-      Thursday: allowedHours(availability.thursdayTime),
-      Friday: allowedHours(availability.fridayTime),
-      Saturday: allowedHours(availability.saturdayTime),
-    };
-
-    // Only include days the lecturer marked as available
-    if (!availability.monday) availMap['Monday'] = [];
-    if (!availability.tuesday) availMap['Tuesday'] = [];
-    if (!availability.wednesday) availMap['Wednesday'] = [];
-    if (!availability.thursday) availMap['Thursday'] = [];
-    if (!availability.friday) availMap['Friday'] = [];
-    if (!availability.saturday) availMap['Saturday'] = [];
-
-    const halls = await prisma.hall.findMany({ include: { building: true } });
-    const hallSchedule = new Map<string, Set<string>>();
-    const baseDate = getWeekStart();
-    const generatedEntries = [];
-
-    for (const course of lecturerCourses) {
-      let assigned = false;
-      for (let dayIndex = 0; dayIndex < DAYS.length && !assigned; dayIndex++) {
-        const day = DAYS[dayIndex];
-        const hours = availMap[day] ?? [];
-        for (const hour of hours) {
-          const slotKey = `${day}-${hour}:00`;
-          for (const hall of halls) {
-            if (hallSchedule.get(hall.id)?.has(slotKey)) continue;
-
-            const startTime = new Date(baseDate);
-            startTime.setUTCDate(baseDate.getUTCDate() + dayIndex);
-            startTime.setUTCHours(hour, 0, 0, 0);
-            const endTime = new Date(startTime);
-            endTime.setUTCHours(hour + 1);
-
-            hallSchedule.set(hall.id, new Set([...(hallSchedule.get(hall.id) || []), slotKey]));
-            generatedEntries.push({
-              campusId: hall.building.campusId,
-              courseId: course.id,
-              hallId: hall.id,
-              startTime,
-              endTime,
-              day,
-            });
-            assigned = true;
-            break;
-          }
-          if (assigned) break;
-        }
-      }
-    }
-
-    await Promise.all(
-      generatedEntries.map((e) =>
-        prisma.timetable.create({
-          data: { campusId: e.campusId, courseId: e.courseId, hallId: e.hallId, startTime: e.startTime, endTime: e.endTime, day: e.day },
-        })
-      )
-    );
-
     return NextResponse.json({
       availability: updated,
-      regenerated: generatedEntries.length,
-      message: `Resubmission validated. Regenerated ${generatedEntries.length} timetable entries for ${instructorName}.`,
+      message: `Resubmission validated for ${availability.lecturer.name}. Please regenerate the timetables to apply changes.`,
     });
   }
 

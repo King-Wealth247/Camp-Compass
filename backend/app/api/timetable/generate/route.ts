@@ -2,16 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { sendPushNotification } from '@/lib/firebase-admin';
 
-const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
-// Map a time range string to allowed start hours
-function allowedHours(timeRange: string | null | undefined): number[] {
-  if (!timeRange) return [8, 9, 10, 11, 13, 14, 15, 16]; // default: full day
-  if (timeRange === '08:00-12:00') return [8, 9, 10, 11];
-  if (timeRange === '13:00-17:00') return [13, 14, 15, 16];
-  if (timeRange === '08:00-17:00') return [8, 9, 10, 11, 13, 14, 15, 16];
-  return [8, 9, 10, 11, 13, 14, 15, 16];
-}
+const TIME_SLOTS = [
+  { start: '08:00', end: '09:50' },
+  { start: '10:10', end: '12:00' },
+  { start: '13:00', end: '15:50' },
+  { start: '16:10', end: '17:00' }
+];
 
 function getWeekStart(startDate?: string) {
   const date = startDate ? new Date(startDate) : new Date();
@@ -25,136 +23,216 @@ function getWeekStart(startDate?: string) {
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const campusId = body.campusId ? String(body.campusId).trim() : undefined;
-  const startDate = body.startDate ? String(body.startDate).trim() : undefined;
+  const { mode, departmentId, levelId, startDate } = body;
 
-  const halls = await prisma.hall.findMany({
-    where: campusId ? { building: { campusId } } : undefined,
-    include: { building: { include: { campus: true } } },
-  });
-
-  const courses = await prisma.course.findMany({
-    orderBy: [{ department: 'asc' }, { level: 'asc' }, { code: 'asc' }],
-  });
-
-  if (courses.length === 0) {
-    return NextResponse.json({ jobId: 'none', message: 'No courses found to generate timetable.' });
-  }
-  if (halls.length === 0) {
-    return NextResponse.json({ jobId: 'none', message: 'No halls available.' }, { status: 400 });
+  if (!mode || !['single', 'department', 'all'].includes(mode)) {
+    return NextResponse.json({ error: 'Invalid generation mode.' }, { status: 400 });
   }
 
-  // Fetch the most recent availability record per lecturer
-  const allInstructors = [...new Set(courses.map((c) => c.instructor))];
-  const availabilityMap: Record<string, Record<string, number[]>> = {};
+  // 1. Target Identification
+  let targetLevels: any[] = [];
+  if (mode === 'single' && levelId) {
+    targetLevels = await prisma.level.findMany({ where: { id: levelId }, include: { department: true } });
+  } else if (mode === 'department' && departmentId) {
+    targetLevels = await prisma.level.findMany({ where: { departmentId }, include: { department: true } });
+  } else if (mode === 'all') {
+    targetLevels = await prisma.level.findMany({ include: { department: true } });
+  }
 
-  for (const instructorName of allInstructors) {
-    const user = await prisma.user.findFirst({ where: { name: instructorName, role: 'staff' } });
-    if (!user) {
-      // No user found — default to full availability
-      availabilityMap[instructorName] = Object.fromEntries(DAYS.map((d) => [d, allowedHours(null)]));
-      continue;
-    }
-
-    const latest = await prisma.availability.findFirst({
-      where: { lecturerId: user.id },
-      orderBy: { submissionDate: 'desc' },
-    });
-
-    if (!latest) {
-      availabilityMap[instructorName] = Object.fromEntries(DAYS.map((d) => [d, allowedHours(null)]));
-      continue;
-    }
-
-    availabilityMap[instructorName] = {
-      Monday:    latest.monday    ? allowedHours(latest.mondayTime)    : [],
-      Tuesday:   latest.tuesday   ? allowedHours(latest.tuesdayTime)   : [],
-      Wednesday: latest.wednesday ? allowedHours(latest.wednesdayTime) : [],
-      Thursday:  latest.thursday  ? allowedHours(latest.thursdayTime)  : [],
-      Friday:    latest.friday    ? allowedHours(latest.fridayTime)    : [],
-    };
+  if (targetLevels.length === 0) {
+    return NextResponse.json({ jobId: 'none', message: 'No target levels found.' }, { status: 400 });
   }
 
   const baseDate = getWeekStart(startDate);
-  const instructorSchedule = new Map<string, Set<string>>();
-  const hallSchedule = new Map<string, Set<string>>();
-  const generatedEntries: Array<{
-    campusId: string; courseId: string; hallId: string;
-    startTime: Date; endTime: Date; day: string;
-  }> = [];
 
-  for (const course of courses) {
-    let assigned = false;
-    const instrAvail = availabilityMap[course.instructor] ?? {};
+  // Load halls
+  const allHalls = await prisma.hall.findMany({
+    include: { building: true },
+    where: { isAvailable: true }
+  });
 
-    for (let dayIndex = 0; dayIndex < DAYS.length && !assigned; dayIndex++) {
-      const day = DAYS[dayIndex];
-      const hours = instrAvail[day] ?? [];
+  if (allHalls.length === 0) {
+    return NextResponse.json({ jobId: 'none', message: 'No halls available.' }, { status: 400 });
+  }
 
-      for (const hour of hours) {
-        const slotKey = `${day}-${hour}:00`;
-        const instructorTaken = instructorSchedule.get(course.instructor)?.has(slotKey);
-        if (instructorTaken) continue;
+  // Load instructor availabilities
+  const availabilityRecords = await prisma.availability.findMany({
+    orderBy: { submissionDate: 'desc' },
+    include: { lecturer: true }
+  });
 
-        for (const hall of halls) {
-          const hallTaken = hallSchedule.get(hall.id)?.has(slotKey);
-          if (hallTaken) continue;
+  const getLecturerAvailability = (lecturerId: string) => {
+    return availabilityRecords.find(a => a.lecturerId === lecturerId);
+  };
+
+  const isInstructorAvailable = (avail: any, dayName: string, slotStr: string) => {
+    if (!avail) return true; // Assume free if no record
+    const dayLower = dayName.toLowerCase();
+    const isFreeOnDay = (avail as any)[dayLower] as boolean;
+    if (!isFreeOnDay) return false;
+
+    const timeField = `${dayLower}Time`;
+    const timeVal = (avail as any)[timeField] as string | null;
+    if (!timeVal) return true; // Free all day if selected but no time specified
+
+    // Check if the required slot matches the availability
+    // User requested: "Actually use the time slots used for the lecturer availability"
+    // We strictly check if the requested slot string exists within the availability string
+    // Or if it matches perfectly.
+    return timeVal.includes(slotStr);
+  };
+
+  const generatedTimetables: any[] = [];
+  const hallSchedule = new Map<string, Set<string>>(); // hallId -> Set<day-slotStr>
+
+  for (const level of targetLevels) {
+    // 2. Data Gathering per level
+    const studentsCount = await prisma.user.count({
+      where: { role: 'student', levelId: level.id, departmentId: level.departmentId }
+    });
+
+    // Filter halls by capacity
+    const eligibleHalls = allHalls.filter(h => h.capacity >= studentsCount);
+    if (eligibleHalls.length === 0) {
+      console.warn(`No hall large enough for Level ${level.level} in ${level.department.departmentName} (Need capacity ${studentsCount})`);
+      continue;
+    }
+
+    const courses = await prisma.course.findMany({
+      where: { levelId: level.id, departmentId: level.departmentId }
+    });
+
+    if (courses.length === 0) continue;
+
+    const subComponentsData: any[] = [];
+    const levelSchedule = new Set<string>(); // day-slotStr
+
+    // Instructor tracking to prevent double booking an instructor at the same time
+    const instructorSchedule = new Map<string, Set<string>>();
+
+    for (const course of courses) {
+      let bookingsForCourse = 0;
+      const MAX_BOOKINGS = 2; // Max 2 times per week
+      
+      const avail = getLecturerAvailability(course.instructorId);
+
+      for (let dayIndex = 0; dayIndex < DAYS.length && bookingsForCourse < MAX_BOOKINGS; dayIndex++) {
+        const day = DAYS[dayIndex];
+        
+        for (const slot of TIME_SLOTS) {
+          if (bookingsForCourse >= MAX_BOOKINGS) break;
+
+          const slotStr = `${slot.start}-${slot.end}`;
+          const timeKey = `${day}-${slotStr}`;
+
+          // Check Level free
+          if (levelSchedule.has(timeKey)) continue;
+
+          // Check Instructor free
+          const instrSet = instructorSchedule.get(course.instructorId) || new Set();
+          if (instrSet.has(timeKey)) continue;
+
+          // Check Instructor explicitly available via Availability form
+          if (!isInstructorAvailable(avail, day, slotStr)) continue;
+
+          // Check Hall free
+          let assignedHall = null;
+          for (const hall of eligibleHalls) {
+            const hallSet = hallSchedule.get(hall.id) || new Set();
+            if (!hallSet.has(timeKey)) {
+              assignedHall = hall;
+              break;
+            }
+          }
+
+          if (!assignedHall) continue;
+
+          // Book it
+          levelSchedule.add(timeKey);
+          
+          const newInstrSet = instructorSchedule.get(course.instructorId) || new Set();
+          newInstrSet.add(timeKey);
+          instructorSchedule.set(course.instructorId, newInstrSet);
+          
+          const newHallSet = hallSchedule.get(assignedHall.id) || new Set();
+          newHallSet.add(timeKey);
+          hallSchedule.set(assignedHall.id, newHallSet);
 
           const startTime = new Date(baseDate);
           startTime.setUTCDate(baseDate.getUTCDate() + dayIndex);
-          startTime.setUTCHours(hour, 0, 0, 0);
-          const endTime = new Date(startTime);
-          endTime.setUTCHours(hour + 1);
+          startTime.setUTCHours(parseInt(slot.start.split(':')[0]), parseInt(slot.start.split(':')[1]), 0, 0);
 
-          hallSchedule.set(hall.id, new Set([...(hallSchedule.get(hall.id) || []), slotKey]));
-          instructorSchedule.set(course.instructor, new Set([...(instructorSchedule.get(course.instructor) || []), slotKey]));
+          const endTime = new Date(baseDate);
+          endTime.setUTCDate(baseDate.getUTCDate() + dayIndex);
+          endTime.setUTCHours(parseInt(slot.end.split(':')[0]), parseInt(slot.end.split(':')[1]), 0, 0);
 
-          generatedEntries.push({
-            campusId: hall.building.campusId,
+          subComponentsData.push({
             courseId: course.id,
-            hallId: hall.id,
+            course: course.title,
+            instructor: course.instructor,
+            hallId: assignedHall.id,
+            hall: assignedHall.name,
+            floor: assignedHall.floor,
             startTime,
             endTime,
-            day,
+            day
           });
-          assigned = true;
-          break;
+
+          bookingsForCourse++;
         }
-        if (assigned) break;
       }
+    }
+
+    if (subComponentsData.length > 0) {
+      // Smartly eliminate extra subcomponents to have <= 10
+      // We will sort them by day, so we keep earlier classes if we have to truncate
+      let finalSubComponents = subComponentsData;
+      if (finalSubComponents.length > 10) {
+        finalSubComponents = finalSubComponents.slice(0, 10);
+      }
+
+      generatedTimetables.push({
+        departmentId: level.departmentId,
+        levelId: level.id,
+        level: level.level,
+        subComponents: finalSubComponents
+      });
     }
   }
 
-  if (campusId) {
-    await prisma.timetable.deleteMany({ where: { campusId } });
+  if (generatedTimetables.length === 0) {
+    return NextResponse.json({ jobId: 'none', message: 'No timetables could be generated. Check constraints.' });
   }
 
-  const created = await Promise.all(
-    generatedEntries.map((entry) =>
-      prisma.timetable.create({
-        data: {
-          campusId: entry.campusId,
-          courseId: entry.courseId,
-          hallId: entry.hallId,
-          startTime: entry.startTime,
-          endTime: entry.endTime,
-          day: entry.day,
-        },
-        include: {
-          course: true,
-          hall: { include: { building: { include: { campus: true } } } },
-          campus: true,
-        },
-      })
-    )
-  );
+  // Transaction to replace timetables
+  await prisma.$transaction(async (tx) => {
+    // Delete existing timetables for target levels
+    const levelIds = targetLevels.map(l => l.id);
+    await tx.timetable.deleteMany({
+      where: { levelId: { in: levelIds } }
+    });
 
-  // Trigger Notification
+    // Insert new timetables
+    for (const tt of generatedTimetables) {
+      await tx.timetable.create({
+        data: {
+          departmentId: tt.departmentId,
+          levelId: tt.levelId,
+          level: tt.level,
+          subComponents: {
+            create: tt.subComponents
+          }
+        }
+      });
+    }
+  });
+
+  // Notifications
   try {
     const users = await prisma.user.findMany({ select: { id: true, fcmTokens: true } });
     if (users.length > 0) {
       const title = 'Timetable Updated';
-      const message = `A new timetable has been generated (${created.length} classes scheduled).`;
+      const message = `A new timetable has been generated for ${generatedTimetables.length} levels.`;
       
       await prisma.notification.createMany({
         data: users.map(u => ({ userId: u.id, title, message, type: 'info' })),
@@ -171,7 +249,6 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({
     jobId: `generate-${Date.now()}`,
-    message: `Generated ${created.length} timetable entries respecting lecturer availability.`,
-    generated: created,
+    message: `Generated timetables for ${generatedTimetables.length} levels.`,
   });
 }

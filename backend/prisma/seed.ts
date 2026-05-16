@@ -207,35 +207,53 @@ async function main() {
   }
 
   // 8. Create Timetables
-  const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-  for (let i = 0; i < 30; i++) {
-    const course = courses[Math.floor(Math.random() * courses.length)];
-    // Find campus for course department
-    const dept = departments.find(d => d.id === course.departmentId);
-    if (!dept) continue;
-    const campus = campuses.find(c => c.id === dept.mainCampusId) || campuses[0];
-    
-    // Find hall in this campus
-    const campusBuildings = buildingNames.map(b => b); // Dummy
-    const hall = hallsList[Math.floor(Math.random() * hallsList.length)];
-    
-    const startHour = Math.floor(Math.random() * 8) + 8; // 8 AM to 4 PM
-    const startTime = new Date();
-    startTime.setHours(startHour, 0, 0, 0);
-    const endTime = new Date(startTime);
-    endTime.setHours(startHour + 2);
-    const day = days[Math.floor(Math.random() * days.length)];
-
-    await prisma.timetable.create({
+  const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const timeSlots = ['08:00-09:50', '10:10-12:00', '13:00-15:50', '16:10-17:00'];
+  
+  // Create 1 Timetable for a specific department and level
+  const targetDept = departments[0];
+  const targetLevel = levels.find(l => l.departmentId === targetDept.id);
+  
+  if (targetLevel) {
+    const timetable = await prisma.timetable.create({
       data: {
-        campusId: campus.id,
-        courseId: course.id,
-        hallId: hall.id,
-        startTime,
-        endTime,
-        day,
+        departmentId: targetDept.id,
+        levelId: targetLevel.id,
+        level: targetLevel.level,
       },
     });
+
+    const levelCourses = courses.filter(c => c.levelId === targetLevel.id);
+    const subComponentCourses = levelCourses.slice(0, 4); // Take up to 4 courses
+
+    for (let i = 0; i < subComponentCourses.length; i++) {
+      const course = subComponentCourses[i];
+      const hall = hallsList[i % hallsList.length];
+      const day = days[i % days.length];
+      const slot = timeSlots[i % timeSlots.length];
+      const [start, end] = slot.split('-');
+
+      const startTime = new Date();
+      startTime.setHours(parseInt(start.split(':')[0]), parseInt(start.split(':')[1]), 0, 0);
+      
+      const endTime = new Date();
+      endTime.setHours(parseInt(end.split(':')[0]), parseInt(end.split(':')[1]), 0, 0);
+
+      await prisma.timetableSubComponent.create({
+        data: {
+          courseId: course.id,
+          course: course.title,
+          instructor: course.instructor,
+          hallId: hall.id,
+          hall: hall.name,
+          floor: hall.floor,
+          startTime,
+          endTime,
+          day,
+          timetableId: timetable.id,
+        },
+      });
+    }
   }
 
   // 9. Create Availabilities
@@ -244,19 +262,19 @@ async function main() {
       data: {
         lecturerId: staff.id,
         monday: true,
-        mondayTime: '09:00-11:00',
-        tuesday: false,
-        tuesdayTime: null,
+        mondayTime: '08:00-09:50',
+        tuesday: true,
+        tuesdayTime: '10:10-12:00',
         wednesday: true,
-        wednesdayTime: '14:00-16:00',
-        thursday: false,
-        thursdayTime: null,
+        wednesdayTime: '13:00-15:50',
+        thursday: true,
+        thursdayTime: '16:10-17:00',
         friday: true,
-        fridayTime: '11:00-13:00',
+        fridayTime: '08:00-09:50',
         saturday: false,
         saturdayTime: null,
         resubmission: 'unseen',
-        description: 'Standard availability',
+        description: 'Standard availability matching timetable slots',
       },
     });
   }
