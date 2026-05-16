@@ -1,4 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from 'expo-constants';
+import { Platform } from 'react-native';
 
 export interface ApiError {
   error: string;
@@ -19,11 +21,27 @@ export interface ApiRequestConfig {
   timeout?: number;
 }
 
+function resolveApiBaseUrl(): string {
+  const fromEnv =
+    (typeof process !== 'undefined' && process.env.EXPO_PUBLIC_API_URL) ||
+    Constants.expoConfig?.extra?.apiUrl ||
+    '';
+  const trimmed = String(fromEnv).trim();
+  if (trimmed) {
+    return trimmed.replace(/\/+$/, '');
+  }
+  // Android emulator: host machine. iOS simulator / dev: localhost.
+  if (Platform.OS === 'android') {
+    return 'http://10.0.2.2:3001';
+  }
+  return 'http://localhost:3001';
+}
+
 export class ApiClient {
   private baseUrl: string;
   private token: string | null = null;
 
-  constructor(baseUrl: string = 'http://localhost:3001') {
+  constructor(baseUrl: string = resolveApiBaseUrl()) {
     this.baseUrl = baseUrl;
     this.initToken();
   }

@@ -17,12 +17,42 @@ export interface LoginPayload {
   password: string;
 }
 
-export interface RegisterPayload {
-  email: string;
-  password: string;
+export interface RegistrarRegisterStudentPayload {
+  role: 'student';
   name: string;
-  role?: 'student' | 'staff' | 'admin' | 'registrar';
+  phone: string;
   institutionId: string;
+  department: string;
+  level: string;
+  regEmail: string;
+  tuitionFullyPaid: boolean;
+}
+
+export interface RegistrarRegisterStaffPayload {
+  role: 'staff';
+  name: string;
+  phone: string;
+  institutionId: string;
+  department: string;
+  regEmail: string;
+  courseTaught: string;
+}
+
+export type RegistrarRegisterPayload = RegistrarRegisterStudentPayload | RegistrarRegisterStaffPayload;
+
+export interface RegistrarRegisterResponse {
+  id: string;
+  email: string;
+  name: string;
+  role: string;
+  phone: string | null;
+  department: string | null;
+  level: string | null;
+  courseTaught: string | null;
+  tuitionPaid: boolean;
+  institutionId: string;
+  createdAt: string;
+  generatedPassword: string;
 }
 
 export class AuthService {
@@ -36,8 +66,11 @@ export class AuthService {
     return response;
   }
 
-  async register(payload: RegisterPayload): Promise<ApiResponse<User>> {
-    return apiClient.post<User>('/api/auth/register', payload);
+  /** Registrar or admin: create student/staff with generated email and password. */
+  async registerByRegistrar(
+    payload: RegistrarRegisterPayload
+  ): Promise<ApiResponse<RegistrarRegisterResponse>> {
+    return apiClient.post<RegistrarRegisterResponse>('/api/auth/register', payload);
   }
 
   async getMe(): Promise<ApiResponse<{ user: { sub: string; role: string } }>> {

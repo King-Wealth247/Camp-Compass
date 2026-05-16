@@ -13,8 +13,11 @@ import {
   Users,
   Settings
 } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { ChangePasswordModal } from "@/components/pages/ChangePasswordModal";
+import { dataService } from "@/lib/dataService";
+import { requestForToken, onMessageListener } from "@/lib/firebase";
+import { toast } from "sonner";
 
 // Routes each role is allowed to access
 const ROLE_ALLOWED_PATHS: Record<string, string[]> = {
@@ -31,6 +34,33 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    if (user) {
+      // Fetch unread count
+      dataService.getNotifications().then(res => {
+        if (res.data) {
+          setUnreadCount(res.data.filter(n => !n.read).length);
+        }
+      });
+
+      // Request FCM Token
+      requestForToken().then(token => {
+        if (token) dataService.saveFcmToken(token).catch(console.error);
+      });
+
+      // Listen for foreground messages
+      onMessageListener().then((payload: any) => {
+        if (payload?.notification) {
+          toast(payload.notification.title, {
+            description: payload.notification.body,
+          });
+          setUnreadCount(prev => prev + 1);
+        }
+      }).catch(err => console.log('failed: ', err));
+    }
+  }, [user]);
 
   useEffect(() => {
     if (!user) {
@@ -63,7 +93,8 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
     if (user.role === "student" && user.tuitionPaid) {
       baseItems.push(
         { icon: Calendar, label: "My Timetable", path: "/dashboard/timetable" },
-        { icon: Bell, label: "Notifications", path: "/dashboard/notifications" }
+        { icon: Bell, label: "Notifications", path: "/dashboard/notifications" },
+        { icon: Settings, label: "Profile", path: "/dashboard/profile" }
       );
     }
 
@@ -71,23 +102,26 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
       baseItems.push(
         { icon: Calendar, label: "My Schedule", path: "/dashboard/timetable" },
         { icon: Clock, label: "Availability", path: "/dashboard/availability" },
-        { icon: Bell, label: "Notifications", path: "/dashboard/notifications" }
+        { icon: Bell, label: "Notifications", path: "/dashboard/notifications" },
+        { icon: Settings, label: "Profile", path: "/dashboard/profile" }
       );
     }
 
     if (user.role === "admin") {
       baseItems.push(
-        { icon: Calendar, label: "Timetables", path: "/dashboard/timetable" },
-        { icon: Building2, label: "Hall Search", path: "/dashboard/halls" },
-        { icon: Clock, label: "Availability", path: "/dashboard/availability" },
-        { icon: Bell, label: "Notifications", path: "/dashboard/notifications" }
+        { icon: Building2, label: "Infrastructure Management", path: "/dashboard/admin/infrastructure" },
+        { icon: Calendar, label: "Timetable Management", path: "/dashboard/admin/timetables" },
+        { icon: Clock, label: "Submissions", path: "/dashboard/admin/submissions" },
+        { icon: Bell, label: "Notifications", path: "/dashboard/admin/notifications" },
+        { icon: Settings, label: "Profile", path: "/dashboard/admin/profile" }
       );
     }
 
     if (user.role === "registrar") {
       baseItems.push(
         { icon: Users, label: "User Management", path: "/dashboard/registrar" },
-        { icon: Settings, label: "Settings", path: "/dashboard/registrar" }
+        { icon: Settings, label: "Settings", path: "/dashboard/registrar" },
+        { icon: Settings, label: "Profile", path: "/dashboard/profile" }
       );
     }
 
@@ -125,7 +159,12 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                   }`}
               >
                 <Icon className="w-5 h-5" />
-                <span className="font-medium">{item.label}</span>
+                <span className="font-medium flex-1 text-left">{item.label}</span>
+                {item.label === "Notifications" && unreadCount > 0 && (
+                  <span className="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                    {unreadCount}
+                  </span>
+                )}
               </button>
             );
           })}

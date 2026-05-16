@@ -23,9 +23,7 @@ export default function AppLayout() {
       <Stack.Screen name="staff/timetable" />
       <Stack.Screen name="staff/availability" />
       <Stack.Screen name="staff/notifications" />
-      <Stack.Screen name="admin/dashboard" />
-      <Stack.Screen name="admin/timetable" />
-      <Stack.Screen name="admin/map" />
+      <Stack.Screen name="admin" />
       <Stack.Screen name="registrar/dashboard" />
     </Stack>
   );

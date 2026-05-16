@@ -4,6 +4,14 @@ import { StatusBar } from 'expo-status-bar';
 import { AuthProvider } from '@/context/AuthContext';
 
 export default function RootLayout() {
+  useEffect(() => {
+    async function register() {
+      const { registerForPushNotificationsAsync } = await import('@/lib/pushNotifications');
+      await registerForPushNotificationsAsync();
+    }
+    register();
+  }, []);
+
   return (
     <AuthProvider>
       <StatusBar style="light" />

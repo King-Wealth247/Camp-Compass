@@ -4,11 +4,42 @@ export interface Hall {
   id: string;
   name: string;
   capacity: number;
-  isAvailable: boolean;
+  available: boolean;
+  floor?: number | { floorNum: number };
+  floorId?: string;
   building: {
     id: string;
     name: string;
+    campusId: string;
+    campus?: {
+      id: string;
+      name: string;
+    };
   };
+  createdAt: string;
+}
+
+export interface Floor {
+  id: string;
+  buildingId: string;
+  floorNum: number;
+  floorPlan?: string; // We'll handle Bytes/base64 on backend, frontend sees string/null
+}
+
+export interface Building {
+  id: string;
+  name: string;
+  code?: string;
+  campusId: string;
+  campus?: {
+    id: string;
+    name: string;
+    institutionId: string;
+  };
+  floors: number;
+  floorRefs?: Floor[];
+  latitude?: number;
+  longitude?: number;
   createdAt: string;
 }
 
@@ -22,6 +53,61 @@ export interface Course {
   createdAt: string;
 }
 
+export interface Department {
+  id: string;
+  departmentName: string;
+  institutionId: string;
+  institution?: {
+    id: string;
+    name: string;
+  };
+}
+
+export interface Level {
+  id: string;
+  level: number;
+  departmentId: string;
+  department?: Department;
+}
+
+export interface Campus {
+  id: string;
+  name: string;
+  city?: string;
+  region?: string;
+  latitude?: number;
+  longitude?: number;
+  institutionId: string;
+  institution?: {
+    id: string;
+    name: string;
+  };
+  buildings?: Building[];
+  createdAt: string;
+}
+
+export interface User {
+  id: string;
+  email: string;
+  name: string;
+  phone?: string | null;
+  role: string;
+  departmentId?: string;
+  department?: string;
+  levelId?: string;
+  level?: string;
+  courseTaught?: string | null;
+  regEmail?: string | null;
+  tuitionPaid: boolean;
+  institutionId: string;
+  createdAt: string;
+}
+
+export interface Institution {
+  id: string;
+  name: string;
+}
+
 export interface Timetable {
   id: string;
   course: Course;
@@ -32,22 +118,101 @@ export interface Timetable {
   createdAt: string;
 }
 
+export interface Availability {
+  id: string;
+  lecturerId: string;
+  monday: boolean;
+  mondayTime: string | null;
+  tuesday: boolean;
+  tuesdayTime: string | null;
+  wednesday: boolean;
+  wednesdayTime: string | null;
+  thursday: boolean;
+  thursdayTime: string | null;
+  friday: boolean;
+  fridayTime: string | null;
+  saturday: boolean;
+  saturdayTime: string | null;
+  resubmission: 'unseen' | 'validated' | 'rejected' | null;
+  description: string | null;
+  submissionDate: string;
+  lecturer: {
+    id: string;
+    name: string;
+    email: string;
+  };
+}
+
+export interface Notification {
+  id: string;
+  userId: string;
+  title: string;
+  message: string;
+  type: 'info' | 'warning' | 'success';
+  broadcast: boolean;
+  read: boolean;
+  createdAt: string;
+}
+
+function normalizeHall(raw: any): Hall {
+  return {
+    ...raw,
+    available: raw.available ?? raw.isAvailable ?? false,
+    building: {
+      ...raw.building,
+      campus: raw.building?.campus,
+    },
+  };
+}
+
 export class DataService {
   // Hall endpoints
   async getHalls(): Promise<ApiResponse<Hall[]>> {
-    return apiClient.get<Hall[]>('/api/halls');
+    const response = await apiClient.get<any[]>('/api/halls');
+    if (response.data) {
+      response.data = response.data.map(normalizeHall);
+    }
+    return response as ApiResponse<Hall[]>;
   }
 
   async getHall(id: string): Promise<ApiResponse<Hall>> {
-    return apiClient.get<Hall>(`/api/halls/${id}`);
+    const response = await apiClient.get<any>(`/api/halls/${id}`);
+    if (response.data) {
+      response.data = normalizeHall(response.data);
+    }
+    return response as ApiResponse<Hall>;
+  }
+
+  async searchHalls(query: string): Promise<ApiResponse<Hall[]>> {
+    const response = await apiClient.get<any[]>(`/api/halls/search?q=${encodeURIComponent(query)}`);
+    if (response.data) {
+      response.data = response.data.map(normalizeHall);
+    }
+    return response as ApiResponse<Hall[]>;
   }
 
   async createHall(data: Omit<Hall, 'id' | 'createdAt'>): Promise<ApiResponse<Hall>> {
-    return apiClient.post<Hall>('/api/halls', data);
+    const payload = {
+      ...data,
+      isAvailable: data.available,
+    };
+    const response = await apiClient.post<any>('/api/halls', payload);
+    if (response.data) {
+      response.data = normalizeHall(response.data);
+    }
+    return response as ApiResponse<Hall>;
   }
 
   async updateHall(id: string, data: Partial<Hall>): Promise<ApiResponse<Hall>> {
-    return apiClient.put<Hall>(`/api/halls/${id}`, data);
+    const payload = {
+      ...data,
+      isAvailable: data.available,
+    };
+    const response = await apiClient.put<any>(`/api/halls/${id}`, payload);
+    if (response.data) {
+      response.data = normalizeHall(response.data);
+    }
+    return response as ApiResponse<Hall>;
   }
 
   async deleteHall(id: string): Promise<ApiResponse<{ message: string }>> {
@@ -67,6 +232,116 @@ export class DataService {
     return apiClient.post<Course>('/api/courses', data);
   }
 
+  async updateCourse(id: string, data: Partial<Course>): Promise<ApiResponse<Course>> {
+    return apiClient.put<Course>(`/api/courses/${id}`, data);
+  }
+
+  async deleteCourse(id: string): Promise<ApiResponse<{ message: string }>> {
+    return apiClient.delete(`/api/courses/${id}`);
+  }
+
+  // Campus endpoints
+  async getCampuses(): Promise<ApiResponse<Campus[]>> {
+    return apiClient.get<Campus[]>('/api/campuses');
+  }
+
+  async getCampus(id: string): Promise<ApiResponse<Campus>> {
+    return apiClient.get<Campus>(`/api/campuses/${id}`);
+  }
+
+  async createCampus(data: Omit<Campus, 'id' | 'createdAt' | 'buildings' | 'institution'>): Promise<ApiResponse<Campus>> {
+    return apiClient.post<Campus>('/api/campuses', data);
+  }
+
+  async updateCampus(id: string, data: Partial<Campus>): Promise<ApiResponse<Campus>> {
+    return apiClient.put<Campus>(`/api/campuses/${id}`, data);
+  }
+
+  async deleteCampus(id: string): Promise<ApiResponse<{ message: string }>> {
+    return apiClient.delete(`/api/campuses/${id}`);
+  }
+
+  // Building endpoints
+  async getBuildings(): Promise<ApiResponse<Building[]>> {
+    return apiClient.get<Building[]>('/api/buildings');
+  }
+
+  async getBuilding(id: string): Promise<ApiResponse<Building>> {
+    return apiClient.get<Building>(`/api/buildings/${id}`);
+  }
+
+  async createBuilding(data: Omit<Building, 'id' | 'createdAt' | 'campus'>): Promise<ApiResponse<Building>> {
+    return apiClient.post<Building>('/api/buildings', data);
+  }
+
+  async updateBuilding(id: string, data: Partial<Building>): Promise<ApiResponse<Building>> {
+    return apiClient.put<Building>(`/api/buildings/${id}`, data);
+  }
+
+  async deleteBuilding(id: string): Promise<ApiResponse<{ message: string }>> {
+    return apiClient.delete(`/api/buildings/${id}`);
+  }
+
+  // Floor endpoints
+  async getFloors(): Promise<ApiResponse<Floor[]>> {
+    return apiClient.get<Floor[]>('/api/floors');
+  }
+
+  async getFloor(id: string): Promise<ApiResponse<Floor>> {
+    return apiClient.get<Floor>(`/api/floors/${id}`);
+  }
+
+  async createFloor(data: Omit<Floor, 'id'>): Promise<ApiResponse<Floor>> {
+    return apiClient.post<Floor>('/api/floors', data);
+  }
+
+  async updateFloor(id: string, data: Partial<Floor>): Promise<ApiResponse<Floor>> {
+    return apiClient.put<Floor>(`/api/floors/${id}`, data);
+  }
+
+  async deleteFloor(id: string): Promise<ApiResponse<{ message: string }>> {
+    return apiClient.delete(`/api/floors/${id}`);
+  }
+
+  // User endpoints
+  async getInstitutions(): Promise<ApiResponse<Institution[]>> {
+    return apiClient.get<Institution[]>('/api/institutions');
+  }
+
+  async getUsers(): Promise<ApiResponse<User[]>> {
+    return apiClient.get<User[]>('/api/users');
+  }
+
+  async getUser(id: string): Promise<ApiResponse<User>> {
+    return apiClient.get<User>(`/api/users/${id}`);
+  }
+
+  async getCurrentUserProfile(): Promise<ApiResponse<User>> {
+    return apiClient.get<User>('/api/auth/me');
+  }
+
+  async createUser(data: Omit<User, 'id' | 'createdAt'> & { password: string }): Promise<ApiResponse<User>> {
+    return apiClient.post<User>('/api/users', data);
+  }
+
+  async updateUser(id: string, data: Partial<User> & { password?: string }): Promise<ApiResponse<User>> {
+    return apiClient.put<User>(`/api/users/${id}`, data);
+  }
+
+  async deleteUser(id: string): Promise<ApiResponse<{ message: string }>> {
+    return apiClient.delete(`/api/users/${id}`);
+  }
+
+  // Department endpoints
+  async getDepartments(): Promise<ApiResponse<Department[]>> {
+    return apiClient.get<Department[]>('/api/departments');
+  }
+  
+  // Level endpoints
+  async getLevels(): Promise<ApiResponse<Level[]>> {
+    return apiClient.get<Level[]>('/api/levels');
+  }
+
   // Timetable endpoints
   async getTimetables(): Promise<ApiResponse<Timetable[]>> {
     return apiClient.get<Timetable[]>('/api/timetable');
@@ -77,11 +352,17 @@ export class DataService {
   }
 
   async getTimetablesByDepartmentAndLevel(
-    department: string,
-    level: string
+    departmentId: string,
+    levelId: string
   ): Promise<ApiResponse<Timetable[]>> {
     return apiClient.get<Timetable[]>(
-      `/api/timetable?department=${department}&level=${level}`
+      `/api/timetable?departmentId=${encodeURIComponent(departmentId)}&levelId=${encodeURIComponent(levelId)}`
+    );
+  }
+
+  async getTimetablesByInstructor(instructor: string): Promise<ApiResponse<Timetable[]>> {
+    return apiClient.get<Timetable[]>(
+      `/api/timetable?instructor=${encodeURIComponent(instructor)}`
     );
   }
 
@@ -90,11 +371,60 @@ export class DataService {
   }
 
   async generateTimetable(params: {
-    campusId: string;
-    startDate: string;
-    endDate: string;
-  }): Promise<ApiResponse<{ jobId: string; message: string }>> {
+    campusId?: string;
+    startDate?: string;
+    endDate?: string;
+  }): Promise<ApiResponse<{ jobId: string; message: string; generated?: Timetable[] }>> {
     return apiClient.post('/api/timetable/generate', params);
+  }
+
+  // Availability endpoints
+  async getAvailabilities(lecturerId?: string): Promise<ApiResponse<Availability[]>> {
+    const url = lecturerId ? `/api/availability?lecturerId=${lecturerId}` : '/api/availability';
+    return apiClient.get<Availability[]>(url);
+  }
+
+  async submitAvailability(data: {
+    lecturerId: string;
+    monday: boolean;
+    mondayTime?: string;
+    tuesday: boolean;
+    tuesdayTime?: string;
+    wednesday: boolean;
+    wednesdayTime?: string;
+    thursday: boolean;
+    thursdayTime?: string;
+    friday: boolean;
+    fridayTime?: string;
+    saturday: boolean;
+    saturdayTime?: string;
+    description?: string;
+  }): Promise<ApiResponse<Availability>> {
+    return apiClient.post<Availability>('/api/availability', data);
+  }
+
+  async reviewAvailability(id: string, action: 'validate' | 'reject'): Promise<ApiResponse<Availability>> {
+    return apiClient.patch<Availability>(`/api/availability/${id}`, { action });
+  }
+  // Notification endpoints
+  async getNotifications(): Promise<ApiResponse<Notification[]>> {
+    return apiClient.get<Notification[]>('/api/notifications');
+  }
+
+  async markNotificationRead(id: string): Promise<ApiResponse<any>> {
+    return apiClient.patch<any>(`/api/notifications/${id}`, {});
+  }
+
+  async deleteNotification(id: string): Promise<ApiResponse<any>> {
+    return apiClient.delete(`/api/notifications/${id}`);
+  }
+
+  async sendBroadcastNotification(data: { title: string; message: string; type?: string; targetRole?: string }): Promise<ApiResponse<any>> {
+    return apiClient.post<any>('/api/notifications', data);
+  }
+
+  async saveFcmToken(token: string): Promise<ApiResponse<any>> {
+    return apiClient.post<any>('/api/users/fcm-token', { token });
   }
 }
 

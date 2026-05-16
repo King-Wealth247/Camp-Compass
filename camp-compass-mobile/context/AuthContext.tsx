@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { authService } from '@/lib/authService';
 
 export type UserRole = 'student' | 'staff' | 'admin' | 'registrar';
 
@@ -8,7 +9,9 @@ export interface User {
   email: string;
   name: string;
   role: UserRole;
+  departmentId?: string;
   department?: string;
+  levelId?: string;
   level?: string;
   tuitionPaid?: boolean;
   isFirstLogin?: boolean;
@@ -17,88 +20,81 @@ export interface User {
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  login: (email: string, password: string) => User | null;
+  login: (email: string, password: string) => Promise<User | null>;
   logout: () => void;
   changePassword: (newPassword: string) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-type MockUser = User & { password: string };
-
-const initialMockUsers: Record<string, MockUser> = {
-  'student@campus.edu': {
-    id: '1',
-    email: 'student@campus.edu',
-    password: 'student123',
-    name: 'Jane Doe',
-    role: 'student',
-    department: 'Computer Science',
-    level: 'Year 3',
-    tuitionPaid: true,
-    isFirstLogin: true,
-  },
-  'staff@campus.edu': {
-    id: '2',
-    email: 'staff@campus.edu',
-    password: 'staff123',
-    name: 'Dr. John Smith',
-    role: 'staff',
-    department: 'Engineering',
-    isFirstLogin: true,
-  },
-  'admin@campus.edu': {
-    id: '3',
-    email: 'admin@campus.edu',
-    password: 'admin123',
-    name: 'Admin User',
-    role: 'admin',
-    isFirstLogin: true,
-  },
-  'registrar@campus.edu': {
-    id: '4',
-    email: 'registrar@campus.edu',
-    password: 'registrar123',
-    name: 'Registrar Office',
-    role: 'registrar',
-    isFirstLogin: true,
-  },
-};
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [mockUsers, setMockUsers] = useState<Record<string, MockUser>>(initialMockUsers);
 
   useEffect(() => {
-    AsyncStorage.getItem('cc_user').then((stored) => {
-      if (stored) setUser(JSON.parse(stored));
+    const initAuth = async () => {
+      try {
+        const stored = await AsyncStorage.getItem('cc_user');
+        if (stored) {
+          const parsedUser = JSON.parse(stored);
+          setUser(parsedUser);
+
+          // Try to validate token with backend
+          try {
+            const response = await authService.getMe();
+            if (!response.data) {
+              // Token invalid, clear user
+              await logout();
+            }
+          } catch (error) {
+            // Token invalid, clear user
+            await logout();
+          }
+        }
+      } catch (error) {
+        console.warn('Failed to load user from AsyncStorage');
+      }
       setLoading(false);
-    });
+    };
+
+    initAuth();
   }, []);
 
-  const login = (email: string, password: string): User | null => {
-    const mockUser = mockUsers[email];
-    if (mockUser && mockUser.password === password) {
-      const { password: _, ...userWithoutPassword } = mockUser;
-      setUser(userWithoutPassword);
-      AsyncStorage.setItem('cc_user', JSON.stringify(userWithoutPassword));
-      return userWithoutPassword;
+  const login = async (email: string, password: string): Promise<User | null> => {
+    try {
+      const response = await authService.login({ email, password });
+
+      if (response.data && response.data.user) {
+        const userData = response.data.user;
+        setUser(userData);
+        await AsyncStorage.setItem('cc_user', JSON.stringify(userData));
+        return userData;
+      }
+      
+      if (response.error) {
+        throw new Error(response.error.error || 'Authentication failed');
+      }
+      return null;
+    } catch (error) {
+      console.error("Login error:", error);
+      throw error;
     }
-    return null;
   };
 
-  const logout = () => {
+  const logout = async () => {
     setUser(null);
-    AsyncStorage.removeItem('cc_user');
+    try {
+      await AsyncStorage.removeItem('cc_user');
+      authService.logout();
+    } catch (error) {
+      console.warn('Failed to clear user from AsyncStorage');
+    }
   };
 
   const changePassword = (newPassword: string) => {
     if (!user) return;
-    setMockUsers((prev) => ({
-      ...prev,
-      [user.email]: { ...prev[user.email], password: newPassword, isFirstLogin: false },
-    }));
+    // Note: This would need a backend endpoint for password change
+    // For now, just update local state
     const updated = { ...user, isFirstLogin: false };
     setUser(updated);
     AsyncStorage.setItem('cc_user', JSON.stringify(updated));

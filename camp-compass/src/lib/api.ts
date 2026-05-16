@@ -17,11 +17,21 @@ export interface ApiRequestConfig {
   timeout?: number;
 }
 
+function resolveApiBaseUrl(): string {
+  const fromEnv =
+    (typeof process !== 'undefined' &&
+      (process.env.NEXT_PUBLIC_API_BASE_URL || process.env.REACT_APP_API_BASE_URL)) ||
+    '';
+  const trimmed = String(fromEnv).trim();
+  const base = (trimmed || 'http://localhost:3001').replace(/\/+$/, '');
+  return base;
+}
+
 export class ApiClient {
   private baseUrl: string;
   private token: string | null = null;
 
-  constructor(baseUrl: string = process.env.REACT_APP_API_BASE_URL || 'http://localhost:3001') {
+  constructor(baseUrl: string = resolveApiBaseUrl()) {
     this.baseUrl = baseUrl;
     this.loadToken();
   }

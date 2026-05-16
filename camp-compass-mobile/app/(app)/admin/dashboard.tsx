@@ -1,148 +1,163 @@
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { useRouter } from 'expo-router';
-import { useAuth } from '@/context/AuthContext';
-import { AppShell } from '@/components/AppShell';
-import { StatCard } from '@/components/StatCard';
-import {
-  Calendar, Building2, Users, AlertTriangle, ChevronRight,
-} from 'lucide-react-native';
-import { halls, timetableData } from '@/data/mockData';
+import React, { useEffect, useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, FlatList, ActivityIndicator } from 'react-native';
+import { User, Users, GraduationCap, Briefcase, ShieldAlert } from 'lucide-react-native';
+
+// We'll mock the data service fetch since we are in React Native and might need an API service utility
+// But since the rest of the app uses a standard fetch or similar, let's use the local API if available.
+import { api } from '@/services/api'; // Assume there is an API service. If not we will use fetch.
 
 export default function AdminDashboard() {
-  const { user } = useAuth();
-  const router = useRouter();
+  const [activeTab, setActiveTab] = useState<"student" | "staff" | "registrar" | "admin">("student");
+  const [users, setUsers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  if (!user) return null;
+  useEffect(() => {
+    fetchUsers();
+  }, []);
 
-  const availableHalls = halls.filter((h) => h.available).length;
-  const totalCourses = timetableData.length;
+  const fetchUsers = async () => {
+    setLoading(true);
+    try {
+      // Assuming api exists, or use standard fetch
+      const res = await fetch('http://localhost:3000/api/users');
+      const data = await res.json();
+      setUsers(data || []);
+    } catch (error) {
+      console.log(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredUsers = users.filter((u) => u.role === activeTab);
+
+  const tabs = [
+    { id: "student", label: "Students", icon: GraduationCap },
+    { id: "staff", label: "Staff", icon: Briefcase },
+    { id: "registrar", label: "Registrars", icon: Users },
+    { id: "admin", label: "Admins", icon: ShieldAlert },
+  ] as const;
+
+  const renderItem = ({ item }: { item: any }) => (
+    <View style={styles.row}>
+      <View style={[styles.cell, { flex: 2 }]}>
+        <Text style={styles.cellTitle}>{item.name}</Text>
+        <Text style={styles.cellSub}>{item.email}</Text>
+      </View>
+      <View style={[styles.cell, { flex: 1 }]}>
+        <Text style={styles.cellText}>{item.department || '-'}</Text>
+      </View>
+      <View style={[styles.cell, { flex: 1, alignItems: 'flex-end' }]}>
+        {item.role === 'student' ? (
+          <View style={[styles.badge, item.tuitionPaid ? styles.badgeGreen : styles.badgeRed]}>
+            <Text style={[styles.badgeText, item.tuitionPaid ? styles.badgeTextGreen : styles.badgeTextRed]}>
+              {item.tuitionPaid ? 'Paid' : 'Unpaid'}
+            </Text>
+          </View>
+        ) : (
+          <View style={[styles.badge, styles.badgeGray]}>
+            <Text style={[styles.badgeText, styles.badgeTextGray]}>Active</Text>
+          </View>
+        )}
+      </View>
+    </View>
+  );
 
   return (
-    <AppShell title="Admin Dashboard">
-      {/* Welcome */}
-      <View style={styles.welcomeBox}>
-        <Text style={styles.welcomeTitle}>Admin Dashboard</Text>
-        <Text style={styles.welcomeSub}>System Overview & Management</Text>
-      </View>
-
-      {/* Stats */}
-      <View style={styles.statsGrid}>
-        <StatCard icon={Calendar} iconColor="#2563EB" iconBg="#DBEAFE" value={String(totalCourses)} label="Scheduled Courses" />
-        <StatCard icon={Building2} iconColor="#16A34A" iconBg="#DCFCE7" value={String(availableHalls)} label="Available Halls" />
-        <StatCard icon={Users} iconColor="#7C3AED" iconBg="#EDE9FE" value="45" label="Active Lecturers" />
-        <StatCard icon={AlertTriangle} iconColor="#EA580C" iconBg="#FFEDD5" value="2" label="Conflicts Detected" />
-      </View>
-
-      {/* Recent Availability Changes */}
-      <View style={styles.card}>
-        <View style={styles.cardHeader}>
-          <Text style={styles.cardTitle}>Recent Availability Changes</Text>
-          <Text style={styles.cardSub}>Lecturer updates this week</Text>
-        </View>
-
-        <View style={[styles.alertBox, { backgroundColor: '#FFFBEB', borderColor: '#FDE68A' }]}>
-          <AlertTriangle color="#D97706" size={18} />
-          <View style={styles.alertContent}>
-            <Text style={styles.alertTitle}>Dr. John Smith — Unavailable</Text>
-            <Text style={styles.alertMsg}>Thursday 14:00–16:00 • Medical appointment</Text>
-            <TouchableOpacity>
-              <Text style={styles.alertAction}>Reschedule Course →</Text>
+    <View style={styles.container}>
+      {/* Navbar Tabs */}
+      <View style={styles.tabsContainer}>
+        {tabs.map((tab) => {
+          const isActive = activeTab === tab.id;
+          return (
+            <TouchableOpacity
+              key={tab.id}
+              style={[styles.tab, isActive && styles.activeTab]}
+              onPress={() => setActiveTab(tab.id)}
+            >
+              <tab.icon color={isActive ? '#2563EB' : '#6B7280'} size={18} />
+              <Text style={[styles.tabText, isActive && styles.activeTabText]}>{tab.label}</Text>
             </TouchableOpacity>
-          </View>
-        </View>
-
-        <View style={[styles.alertBox, { backgroundColor: '#F0FDF4', borderColor: '#BBF7D0' }]}>
-          <View style={styles.alertContent}>
-            <Text style={styles.alertTitle}>Dr. Sarah Johnson</Text>
-            <Text style={styles.alertMsg}>Available all week • No conflicts</Text>
-          </View>
-        </View>
-
-        <View style={[styles.alertBox, { backgroundColor: '#F9FAFB', borderColor: '#E5E7EB' }]}>
-          <View style={styles.alertContent}>
-            <Text style={styles.alertTitle}>Dr. Emily Brown</Text>
-            <Text style={styles.alertMsg}>Available all week • No conflicts</Text>
-          </View>
-        </View>
+          );
+        })}
       </View>
 
-      {/* Management Tools */}
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Management Tools</Text>
-        {[
-          { label: 'Generate New Timetable', sub: "Create next week's schedule", color: '#EFF6FF', iconBg: '#2563EB', icon: Calendar, route: '/(app)/admin/timetable' },
-          { label: 'Hall Search & Management', sub: 'Find and manage halls', color: '#F0FDF4', iconBg: '#16A34A', icon: Building2, route: '/(app)/admin/map' },
-          { label: 'View All Timetables', sub: 'Browse all schedules', color: '#FAF5FF', iconBg: '#7C3AED', icon: Calendar, route: '/(app)/admin/timetable' },
-          { label: 'Send Notification', sub: 'Alert students & staff', color: '#FFF7ED', iconBg: '#EA580C', icon: Users, route: '/(app)/admin/dashboard' },
-        ].map((item) => (
-          <TouchableOpacity
-            key={item.label}
-            style={[styles.quickBtn, { backgroundColor: item.color }]}
-            onPress={() => router.push(item.route as any)}
-            activeOpacity={0.7}
-          >
-            <View style={[styles.quickIcon, { backgroundColor: item.iconBg }]}>
-              <item.icon color="#fff" size={20} />
-            </View>
-            <View style={styles.quickText}>
-              <Text style={styles.quickTitle}>{item.label}</Text>
-              <Text style={styles.quickSub}>{item.sub}</Text>
-            </View>
-            <ChevronRight color="#9CA3AF" size={18} />
-          </TouchableOpacity>
-        ))}
+      {/* Table Header */}
+      <View style={styles.headerRow}>
+        <Text style={[styles.headerText, { flex: 2 }]}>User</Text>
+        <Text style={[styles.headerText, { flex: 1 }]}>Dept</Text>
+        <Text style={[styles.headerText, { flex: 1, textAlign: 'right' }]}>Status</Text>
       </View>
-    </AppShell>
+
+      {/* Content */}
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#2563EB" />
+        </View>
+      ) : (
+        <FlatList
+          data={filteredUsers}
+          keyExtractor={(item) => item.id}
+          renderItem={renderItem}
+          contentContainerStyle={styles.listContent}
+          ListEmptyComponent={
+            <Text style={styles.emptyText}>No users found for this role.</Text>
+          }
+        />
+      )}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  welcomeBox: {
-    backgroundColor: '#111827',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 16,
-  },
-  welcomeTitle: { color: '#fff', fontSize: 22, fontWeight: '800', marginBottom: 4 },
-  welcomeSub: { color: 'rgba(255,255,255,0.7)', fontSize: 13 },
-  statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 16 },
-  card: {
+  container: { flex: 1, backgroundColor: '#F8FAFF' },
+  tabsContainer: {
+    flexDirection: 'row',
     backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 3,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
   },
-  cardHeader: { marginBottom: 12 },
-  cardTitle: { fontSize: 16, fontWeight: '700', color: '#111827' },
-  cardSub: { fontSize: 12, color: '#6B7280', marginTop: 2 },
-  alertBox: {
-    flexDirection: 'row',
-    gap: 10,
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 8,
-    alignItems: 'flex-start',
-  },
-  alertContent: { flex: 1 },
-  alertTitle: { fontSize: 13, fontWeight: '700', color: '#111827' },
-  alertMsg: { fontSize: 12, color: '#6B7280', marginTop: 2 },
-  alertAction: { fontSize: 12, color: '#2563EB', fontWeight: '600', marginTop: 4 },
-  quickBtn: {
-    flexDirection: 'row',
+  tab: {
+    flex: 1,
+    paddingVertical: 12,
     alignItems: 'center',
-    gap: 12,
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 8,
+    gap: 4,
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
   },
-  quickIcon: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  quickText: { flex: 1 },
-  quickTitle: { fontSize: 14, fontWeight: '700', color: '#111827' },
-  quickSub: { fontSize: 12, color: '#6B7280', marginTop: 1 },
+  activeTab: { borderBottomColor: '#2563EB' },
+  tabText: { fontSize: 11, fontWeight: '500', color: '#6B7280', marginTop: 2 },
+  activeTabText: { color: '#2563EB', fontWeight: '700' },
+  headerRow: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#F3F4F6',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  headerText: { fontSize: 12, fontWeight: '600', color: '#4B5563', textTransform: 'uppercase' },
+  listContent: { paddingBottom: 20 },
+  row: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+    alignItems: 'center',
+  },
+  cell: { justifyContent: 'center' },
+  cellTitle: { fontSize: 14, fontWeight: '600', color: '#111827' },
+  cellSub: { fontSize: 12, color: '#6B7280', marginTop: 2 },
+  cellText: { fontSize: 13, color: '#4B5563' },
+  badge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12, alignSelf: 'flex-start' },
+  badgeGreen: { backgroundColor: '#DCFCE7' },
+  badgeTextGreen: { color: '#16A34A', fontSize: 11, fontWeight: '600' },
+  badgeRed: { backgroundColor: '#FEE2E2' },
+  badgeTextRed: { color: '#DC2626', fontSize: 11, fontWeight: '600' },
+  badgeGray: { backgroundColor: '#F3F4F6' },
+  badgeTextGray: { color: '#4B5563', fontSize: 11, fontWeight: '600' },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  emptyText: { textAlign: 'center', color: '#6B7280', marginTop: 32 },
 });

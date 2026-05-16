@@ -14,79 +14,198 @@ enum UserRole {
   registrar
 }
 
+enum ResubmissionStatus {
+  unseen
+  validated
+  rejected
+}
+
 model Institution {
-  id        String    @id @default(cuid())
-  name      String
-  createdAt DateTime  @default(now())
-  users     User[]
-  campuses  Campus[]
+  id          String       @id @default(cuid())
+  name        String
+  createdAt   DateTime     @default(now())
+  users       User[]
+  campuses    Campus[]
+  departments Department[]
 }
 
 model Campus {
-  id            String    @id @default(cuid())
+  id            String       @id @default(cuid())
   name          String
-  institution   Institution @relation(fields: [institutionId], references: [id])
+  city          String?
+  region        String?
+  latitude      Float?
+  longitude     Float?
+  institution   Institution  @relation(fields: [institutionId], references: [id])
   institutionId String
   buildings     Building[]
-  timetables    Timetable[]
-  createdAt     DateTime  @default(now())
+  departments   Department[] // mainCampus relation
+  createdAt     DateTime     @default(now())
+}
+
+model Department {
+  id             String      @id @default(cuid())
+  institutionId  String
+  institution    Institution @relation(fields: [institutionId], references: [id])
+  departmentName String
+  mainCampusId   String?
+  mainCampus     Campus?     @relation(fields: [mainCampusId], references: [id])
+  levels         Level[]
+  users          User[]
+  courses        Course[]
+  timetables     Timetable[]
+}
+
+model Level {
+  id           String     @id @default(cuid())
+  departmentId String
+  department   Department @relation(fields: [departmentId], references: [id])
+  level        Int
+  users        User[]
+  courses      Course[]
+  timetables   Timetable[]
 }
 
 model Building {
   id        String   @id @default(cuid())
   name      String
+  code      String?
   campus    Campus   @relation(fields: [campusId], references: [id])
   campusId  String
+  floors    Int      @default(1)
+  latitude  Float?
+  longitude Float?
   halls     Hall[]
+  floorRefs Floor[]
   createdAt DateTime @default(now())
 }
 
+model Floor {
+  id         String   @id @default(cuid())
+  buildingId String
+  building   Building @relation(fields: [buildingId], references: [id])
+  floorNum   Int
+  floorPlan  Bytes?
+  halls      Hall[]
+}
+
 model Hall {
-  id          String    @id @default(cuid())
+  id          String      @id @default(cuid())
   name        String
   capacity    Int
-  building    Building  @relation(fields: [buildingId], references: [id])
+  floorId     String?
+  floorRef    Floor?      @relation(fields: [floorId], references: [id])
+  floor       Int?
+  building    Building    @relation(fields: [buildingId], references: [id])
   buildingId  String
-  timetables  Timetable[]
-  isAvailable Boolean   @default(true)
-  createdAt   DateTime  @default(now())
+  timetableSubComponents TimetableSubComponent[]
+  isAvailable Boolean     @default(true)
+  createdAt   DateTime    @default(now())
 }
 
 model Course {
-  id         String    @id @default(cuid())
-  code       String    @unique
-  title      String
-  department String
-  level      String
-  instructor String
-  timetables Timetable[]
-  createdAt  DateTime  @default(now())
+  id            String      @id @default(cuid())
+  code          String      @unique
+  title         String
+  departmentId  String
+  departmentRef Department  @relation(fields: [departmentId], references: [id])
+  department    String
+  levelId       String
+  levelRef      Level       @relation(fields: [levelId], references: [id])
+  level         Int
+  instructorId  String
+  instructorRef User        @relation(fields: [instructorId], references: [id])
+  instructor    String
+  timetableSubComponents TimetableSubComponent[]
+  createdAt     DateTime    @default(now())
 }
 
 model Timetable {
-  id        String    @id @default(cuid())
-  campus    Campus    @relation(fields: [campusId], references: [id])
-  campusId  String
-  course    Course    @relation(fields: [courseId], references: [id])
-  courseId  String
-  hall      Hall      @relation(fields: [hallId], references: [id])
-  hallId    String
-  startTime DateTime
-  endTime   DateTime
-  day       String
-  createdAt DateTime  @default(now())
+  id            String                  @id @default(cuid())
+  departmentId  String
+  department    Department              @relation(fields: [departmentId], references: [id])
+  levelId       String
+  levelRef      Level                   @relation(fields: [levelId], references: [id])
+  level         Int
+  createdAt     DateTime                @default(now())
+  subComponents TimetableSubComponent[]
+}
+
+model TimetableSubComponent {
+  id          String    @id @default(cuid())
+  courseId    String
+  courseRef   Course    @relation(fields: [courseId], references: [id])
+  course      String
+  instructor  String
+  hallId      String
+  hallRef     Hall      @relation(fields: [hallId], references: [id])
+  hall        String
+  floor       Int?
+  startTime   DateTime
+  endTime     DateTime
+  day         String
+  timetableId String
+  timetable   Timetable @relation(fields: [timetableId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
 }
 
 model User {
-  id             String      @id @default(cuid())
-  email          String      @unique
+  id             String         @id @default(cuid())
+  email          String         @unique
   password       String
   name           String
-  role           UserRole    @default(student)
+  phone          String?
+  role           UserRole       @default(student)
+  
+  departmentId   String?
+  departmentRef  Department?    @relation(fields: [departmentId], references: [id])
   department     String?
-  level          String?
-  tuitionPaid    Boolean     @default(false)
-  institution    Institution @relation(fields: [institutionId], references: [id])
+  
+  levelId        String?
+  levelRef       Level?         @relation(fields: [levelId], references: [id])
+  level          Int?
+  
+  regEmail       String?
+  
+  tuitionPaid    Boolean        @default(false)
+  institution    Institution    @relation(fields: [institutionId], references: [id])
   institutionId  String
-  createdAt      DateTime    @default(now())
+  fcmTokens      String[]       @default([])
+  availabilities Availability[]
+  notifications  Notification[]
+  coursesTaught  Course[]
+  createdAt      DateTime       @default(now())
+}
+
+model Availability {
+  id             String              @id @default(cuid())
+  lecturer       User                @relation(fields: [lecturerId], references: [id])
+  lecturerId     String
+  monday         Boolean             @default(false)
+  mondayTime     String?
+  tuesday        Boolean             @default(false)
+  tuesdayTime    String?
+  wednesday      Boolean             @default(false)
+  wednesdayTime  String?
+  thursday       Boolean             @default(false)
+  thursdayTime   String?
+  friday         Boolean             @default(false)
+  fridayTime     String?
+  saturday       Boolean             @default(false)
+  saturdayTime   String?
+  resubmission   ResubmissionStatus? @default(unseen)
+  description    String?
+  submissionDate DateTime            @default(now())
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  title     String
+  message   String
+  type      String   @default("info")
+  broadcast Boolean  @default(false)
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
 }
