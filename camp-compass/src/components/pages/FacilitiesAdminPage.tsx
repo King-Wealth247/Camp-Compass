@@ -387,7 +387,7 @@ export function FacilitiesAdminPage() {
                 
                 {activeTab === 'halls' && halls.map(hall => (
                   <tr key={hall.id} className="border-b border-gray-100 hover:bg-gray-50 transition">
-                    <td className="p-4 font-medium text-gray-900">{hall.name} (Floor {hall.floor})</td>
+                    <td className="p-4 font-medium text-gray-900">{hall.name} (Floor {typeof hall.floor === 'object' ? hall.floor.floorNum : hall.floor})</td>
                     <td className="p-4 text-gray-600">{hall.building?.name || 'Unknown'}</td>
                     <td className="p-4 text-gray-600">{hall.capacity} seats</td>
                     <td className="p-4">

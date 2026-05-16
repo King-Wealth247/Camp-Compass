@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { dataService, Timetable, Institution, Department, Level } from "@/lib/dataService";
 import { CalendarDays, Wand2, ChevronDown, ChevronRight, Loader2 } from "lucide-react";
 import { toast } from "sonner";

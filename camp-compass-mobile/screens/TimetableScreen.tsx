@@ -6,7 +6,8 @@ import { useRouter } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
 import { AppShell } from '@/components/AppShell';
 import { MapPin, User, X, ChevronDown } from 'lucide-react-native';
-import { timetableData, TimetableEntry } from '@/data/mockData';
+import { TimetableEntry } from '@/data/mockData';
+import { dataService } from '@/services/dataService';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 const TIME_SLOTS = ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00'];
@@ -35,13 +36,7 @@ function slotHeight(startTime: string, endTime: string) {
   return (timeToMinutes(endTime) - timeToMinutes(startTime)) * (SLOT_HEIGHT / 60);
 }
 
-// Derive unique departments and levels from data
-const ALL_DEPARTMENTS = [...new Set(timetableData.map((e) => e.department))].sort();
-const LEVELS_BY_DEPT: Record<string, string[]> = {};
-timetableData.forEach((e) => {
-  if (!LEVELS_BY_DEPT[e.department]) LEVELS_BY_DEPT[e.department] = [];
-  if (!LEVELS_BY_DEPT[e.department].includes(e.level)) LEVELS_BY_DEPT[e.department].push(e.level);
-});
+
 
 interface SlotModalProps {
   entry: TimetableEntry;
@@ -130,6 +125,8 @@ function Dropdown({ label, value, options, onSelect }: DropdownProps) {
 export default function TimetableScreen() {
   const { user } = useAuth();
   const router = useRouter();
+  
+  const [dbTimetables, setDbTimetables] = useState<any[]>([]);
   const [selectedDay, setSelectedDay] = useState('Monday');
   const [selectedEntry, setSelectedEntry] = useState<TimetableEntry | null>(null);
   const [filterDept, setFilterDept] = useState('');
@@ -140,23 +137,72 @@ export default function TimetableScreen() {
   const isAdmin = user.role === 'admin';
   const isStaff = user.role === 'staff';
 
+  useState(() => {
+    if (!user) return;
+    const load = async () => {
+      try {
+        let res;
+        if (user.role === 'student') {
+          if (user.departmentId && user.levelId) {
+            res = await dataService.getTimetablesByDepartmentAndLevel(user.departmentId, user.levelId);
+            if (res.data && res.data.length > 0) {
+              setDbTimetables([res.data[0]]); // Take only the latest one
+            }
+          }
+        } else if (user.role === 'staff') {
+          res = await dataService.getTimetablesByInstructor(user.name);
+          setDbTimetables(res.data || []);
+        } else {
+          res = await dataService.getTimetables();
+          setDbTimetables(res.data || []);
+        }
+      } catch (err) {
+        console.error("Failed to fetch timetables", err);
+      }
+    };
+    load();
+  });
+
   const allEntries = useMemo(() => {
-    if (isStaff) return timetableData.filter((e) => e.lecturerName === user.name);
+    let entries: TimetableEntry[] = [];
+    
+    dbTimetables.forEach((tt: any) => {
+      if (tt.subComponents) {
+        tt.subComponents.forEach((sub: any) => {
+          entries.push({
+            id: sub.id,
+            courseId: sub.courseId,
+            courseCode: sub.courseRef?.code || sub.course,
+            courseName: sub.courseRef?.title || sub.course,
+            lecturerName: sub.instructor,
+            department: tt.department?.departmentName || "Unknown Dept",
+            level: `Level ${tt.level}`,
+            day: sub.day,
+            startTime: new Date(sub.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }),
+            endTime: new Date(sub.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }),
+            hallId: sub.hallId,
+            hallCode: sub.hall,
+            floor: sub.floor || 1,
+            buildingId: sub.hallRef?.buildingId || '',
+          });
+        });
+      }
+    });
+
     if (isAdmin) {
-      let entries = timetableData;
       if (filterDept) entries = entries.filter((e) => e.department === filterDept);
-      if (filterLevel) entries = entries.filter((e) => e.level === filterLevel);
-      return entries;
+      if (filterLevel) entries = entries.filter((e) => e.level.includes(filterLevel));
     }
-    // student
-    return timetableData.filter(
-      (e) => e.department === user.department && e.level === user.level
-    );
-  }, [user, filterDept, filterLevel]);
+    
+    return entries;
+  }, [dbTimetables, filterDept, filterLevel, isAdmin]);
 
   const dayEntries = allEntries.filter((e) => e.day === selectedDay);
 
-  const levelOptions = filterDept ? (LEVELS_BY_DEPT[filterDept] ?? []) : [...new Set(timetableData.map((e) => e.level))].sort();
+  const ALL_DEPARTMENTS = [...new Set(allEntries.map((e) => e.department))].sort();
+  const levelOptions = filterDept 
+    ? [...new Set(allEntries.filter(e => e.department === filterDept).map((e) => e.level))].sort()
+    : [...new Set(allEntries.map((e) => e.level))].sort();
 
   const mapRoute = isAdmin
     ? '/(app)/admin/map'

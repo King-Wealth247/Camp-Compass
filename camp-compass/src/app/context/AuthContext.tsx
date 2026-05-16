@@ -10,7 +10,9 @@ export interface User {
   email: string;
   name: string;
   role: UserRole;
+  departmentId?: string;
   department?: string;
+  levelId?: string;
   level?: string;
   tuitionPaid?: boolean;
   isFirstLogin?: boolean;

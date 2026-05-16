@@ -54,6 +54,7 @@ export function CampusMapPage() {
   const [campuses, setCampuses] = useState<Campus[]>([]);
   const [buildings, setBuildings] = useState<Building[]>([]);
   const [halls, setHalls] = useState<Hall[]>([]);
+  const [floorsData, setFloorsData] = useState<any[]>([]);
   const [selectedCampusId, setSelectedCampusId] = useState<string | null>(null);
   const [selectedBuildingId, setSelectedBuildingId] = useState<string | null>(null);
   const [selectedFloor, setSelectedFloor] = useState<number>(1);
@@ -151,10 +152,11 @@ export function CampusMapPage() {
 
   useEffect(() => {
     async function loadData() {
-      const [campusRes, buildingRes, hallRes] = await Promise.all([
+      const [campusRes, buildingRes, hallRes, floorRes] = await Promise.all([
         dataService.getCampuses(),
         dataService.getBuildings(),
         dataService.getHalls(),
+        dataService.getFloors(),
       ]);
 
       if (campusRes.data) {
@@ -170,6 +172,10 @@ export function CampusMapPage() {
 
       if (hallRes.data) {
         setHalls(hallRes.data);
+      }
+
+      if (floorRes.data) {
+        setFloorsData(floorRes.data);
       }
     }
 
@@ -848,10 +854,39 @@ export function CampusMapPage() {
                       </div>
                     </div>
                     <div className="p-6">
-                      <div className="relative h-96 rounded-3xl border border-gray-200 bg-slate-100">
-                        <div className="absolute inset-0 flex items-center justify-center text-slate-400">
-                          <span className="text-xl font-semibold">{selectedBuilding.code ?? selectedBuilding.name}</span>
-                        </div>
+                      <div className="relative h-96 rounded-3xl border border-gray-200 bg-slate-100 overflow-hidden">
+                        {(() => {
+                          const matchingFloor = floorsData.find(f => f.buildingId === selectedBuilding.id && f.floorNum === selectedFloor);
+                          if (matchingFloor?.floorPlan) {
+                            return (
+                              <img 
+                                src={matchingFloor.floorPlan} 
+                                alt={`Floor plan for ${selectedBuilding.name} - Floor ${selectedFloor}`} 
+                                className="absolute inset-0 w-full h-full object-cover"
+                              />
+                            );
+                          }
+                          return (
+                            <div className="absolute inset-0 flex flex-col gap-4 items-center justify-center text-slate-400 bg-slate-50">
+                              <Building2 className="w-12 h-12" />
+                              <div className="text-center">
+                                <span className="text-xl font-semibold text-slate-600 block">{selectedBuilding.code ?? selectedBuilding.name}</span>
+                                <span className="text-sm">No Floor Plan Available</span>
+                              </div>
+                              {selectedBuilding.latitude && selectedBuilding.longitude && (
+                                <a 
+                                  href={`https://www.google.com/maps/search/?api=1&query=${selectedBuilding.latitude},${selectedBuilding.longitude}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="mt-2 inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition"
+                                >
+                                  <Navigation className="w-4 h-4" />
+                                  Open in Google Maps
+                                </a>
+                              )}
+                            </div>
+                          );
+                        })()}
                         {activeFloorHalls.map((hall, index) => (
                           <div
                             key={hall.id}
@@ -908,7 +943,7 @@ export function CampusMapPage() {
                           <div className="flex items-center justify-between gap-3">
                             <div>
                               <p className="font-semibold text-gray-900">{hall.name}</p>
-                              <p className="text-sm text-gray-500">Floor {hall.floor}</p>
+                              <p className="text-sm text-gray-500">Floor {typeof hall.floor === 'object' ? hall.floor.floorNum : hall.floor}</p>
                             </div>
                             <span className={`rounded-full px-3 py-1 text-xs font-semibold ${
                               hall.available ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'

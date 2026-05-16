@@ -92,7 +92,9 @@ export interface User {
   name: string;
   phone?: string | null;
   role: string;
+  departmentId?: string;
   department?: string;
+  levelId?: string;
   level?: string;
   courseTaught?: string | null;
   tuitionPaid: boolean;
@@ -349,11 +351,11 @@ export class DataService {
   }
 
   async getTimetablesByDepartmentAndLevel(
-    department: string,
-    level: string
+    departmentId: string,
+    levelId: string
   ): Promise<ApiResponse<Timetable[]>> {
     return apiClient.get<Timetable[]>(
-      `/api/timetable?department=${encodeURIComponent(department)}&level=${encodeURIComponent(level)}`
+      `/api/timetable?departmentId=${encodeURIComponent(departmentId)}&levelId=${encodeURIComponent(levelId)}`
     );
   }
 

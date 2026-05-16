@@ -1,20 +1,21 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/context/AuthContext";
-import { Calendar, MapPin, User, X, ChevronDown } from "lucide-react";
+import { Calendar, MapPin, User, X, ChevronDown, Loader2 } from "lucide-react";
 import { dataService, Timetable } from "@/lib/dataService";
-import { timetableData, TimetableEntry } from "@/app/data/mockData";
+import { TimetableEntry } from "@/app/data/mockData"; // Keeping the type for UI consistency
 
-const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
-const TIME_SLOTS = ["08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00"];
+const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+const TIME_SLOTS = ["08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00"];
 
 const DEPT_COLORS: Record<string, string> = {
   "Computer Science": "#2563EB",
   "Engineering": "#7C3AED",
   "Science": "#059669",
 };
+
 function deptColor(dept: string) {
-  return DEPT_COLORS[dept] ?? "#6B7280";
+  return DEPT_COLORS[dept] ?? "#2563EB";
 }
 
 function timeToMinutes(t: string) {
@@ -28,16 +29,10 @@ const SLOT_HEIGHT_PX = 64;
 function slotTopPx(startTime: string) {
   return (timeToMinutes(startTime) - BASE_HOUR * 60) * (SLOT_HEIGHT_PX / 60);
 }
+
 function slotHeightPx(startTime: string, endTime: string) {
   return (timeToMinutes(endTime) - timeToMinutes(startTime)) * (SLOT_HEIGHT_PX / 60);
 }
-
-const ALL_DEPARTMENTS = [...new Set(timetableData.map((e) => e.department))].sort();
-const LEVELS_BY_DEPT: Record<string, string[]> = {};
-timetableData.forEach((e) => {
-  if (!LEVELS_BY_DEPT[e.department]) LEVELS_BY_DEPT[e.department] = [];
-  if (!LEVELS_BY_DEPT[e.department].includes(e.level)) LEVELS_BY_DEPT[e.department].push(e.level);
-});
 
 interface SlotDetailProps {
   entry: TimetableEntry;
@@ -86,35 +81,104 @@ function SlotDetail({ entry, onClose, onViewMap, showMap }: SlotDetailProps) {
 export function TimetablePage() {
   const { user } = useAuth();
   const router = useRouter();
+  
+  const [loading, setLoading] = useState(true);
+  const [dbTimetables, setDbTimetables] = useState<any[]>([]);
+  
   const [viewMode, setViewMode] = useState<"week" | "list">("week");
   const [selectedDay, setSelectedDay] = useState("Monday");
   const [selectedEntry, setSelectedEntry] = useState<TimetableEntry | null>(null);
+  
   const [filterDept, setFilterDept] = useState("");
   const [filterLevel, setFilterLevel] = useState("");
   const [deptOpen, setDeptOpen] = useState(false);
   const [levelOpen, setLevelOpen] = useState(false);
 
+  // Fetch timetables based on role
+  useEffect(() => {
+    if (!user) return;
+
+    const load = async () => {
+      setLoading(true);
+      try {
+        let res;
+        if (user.role === 'student') {
+          // If student, check the database for existing timetable for their specific departmentId and levelId
+          if (user.departmentId && user.levelId) {
+            res = await dataService.getTimetablesByDepartmentAndLevel(user.departmentId, user.levelId);
+            // We just need the latest timetable (backend sorts by desc createdAt)
+            if (res.data && res.data.length > 0) {
+              setDbTimetables([res.data[0]]); // Take only the latest one
+            } else {
+              setDbTimetables([]);
+            }
+          }
+        } else if (user.role === 'staff') {
+          // Instructor view
+          res = await dataService.getTimetablesByInstructor(user.name);
+          setDbTimetables(res.data || []);
+        } else {
+          // Admin/Registrar gets all
+          res = await dataService.getTimetables();
+          setDbTimetables(res.data || []);
+        }
+      } catch (err) {
+        console.error("Failed to load timetables", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    load();
+  }, [user]);
+
   if (!user) return null;
 
   const isAdmin = user.role === "admin";
   const isStaff = user.role === "staff";
-  const hasMap = isAdmin || user.role === "student";
+  const hasMap = isAdmin || user.role === "student" || user.role === "staff";
 
+  // Map backend timetables to UI entries
   const allEntries = useMemo(() => {
-    if (isStaff) return timetableData.filter((e) => e.lecturerName === user.name);
+    let entries: TimetableEntry[] = [];
+    
+    dbTimetables.forEach((tt: any) => {
+      if (tt.subComponents) {
+        tt.subComponents.forEach((sub: any) => {
+          entries.push({
+            id: sub.id,
+            courseId: sub.courseId,
+            courseCode: sub.courseRef?.code || sub.course,
+            courseName: sub.courseRef?.title || sub.course,
+            lecturerName: sub.instructor,
+            department: tt.department?.departmentName || "Unknown Dept",
+            level: `Level ${tt.level}`,
+            day: sub.day,
+            startTime: new Date(sub.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }),
+            endTime: new Date(sub.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }),
+            hallId: sub.hallId,
+            hallCode: sub.hall,
+            floor: sub.floor || 1,
+            buildingId: sub.hallRef?.buildingId || '',
+          });
+        });
+      }
+    });
+
     if (isAdmin) {
-      let entries = timetableData;
       if (filterDept) entries = entries.filter((e) => e.department === filterDept);
-      if (filterLevel) entries = entries.filter((e) => e.level === filterLevel);
-      return entries;
+      if (filterLevel) entries = entries.filter((e) => e.level.includes(filterLevel));
     }
-    return timetableData.filter(
-      (e) => e.department === user.department && e.level === user.level
-    );
-  }, [user, filterDept, filterLevel]);
+    
+    return entries;
+  }, [dbTimetables, filterDept, filterLevel, isAdmin]);
+
+  const ALL_DEPARTMENTS = [...new Set(allEntries.map((e) => e.department))].sort();
+  const levelOptions = filterDept 
+    ? [...new Set(allEntries.filter(e => e.department === filterDept).map((e) => e.level))].sort()
+    : [...new Set(allEntries.map((e) => e.level))].sort();
 
   const dayEntries = allEntries.filter((e) => e.day === selectedDay);
-  const levelOptions = filterDept ? (LEVELS_BY_DEPT[filterDept] ?? []) : [...new Set(timetableData.map((e) => e.level))].sort();
 
   const handleViewMap = (entry: TimetableEntry) => {
     setSelectedEntry(null);
@@ -123,6 +187,15 @@ export function TimetablePage() {
 
   const totalGridHeight = TIME_SLOTS.length * SLOT_HEIGHT_PX;
 
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full text-blue-600">
+        <Loader2 className="w-10 h-10 animate-spin mb-4" />
+        <p className="text-gray-500 font-medium">Loading Timetable...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="p-6 h-full flex flex-col">
       {/* Header */}
@@ -130,14 +203,14 @@ export function TimetablePage() {
         <div className="flex items-center justify-between mb-3">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">
-              {isStaff ? "Teaching Schedule" : "Timetable"}
+              {isStaff ? "Teaching Schedule" : "My Timetable"}
             </h1>
             <p className="text-sm text-gray-500 mt-0.5">
               {isAdmin
                 ? `${filterDept || "All Departments"} · ${filterLevel || "All Levels"} · ${allEntries.length} entries`
                 : isStaff
                 ? `${user.name} · ${allEntries.length} classes`
-                : `${user.department} · ${user.level} · ${allEntries.length} courses`}
+                : `${user.department || 'No Dept'} · Level ${user.level || 'No Level'} · ${allEntries.length} courses`}
             </p>
           </div>
           <div className="flex gap-2">
@@ -251,7 +324,9 @@ export function TimetablePage() {
 
                 {dayEntries.map((entry) => {
                   const top = slotTopPx(entry.startTime);
-                  const height = slotHeightPx(entry.startTime, entry.endTime);
+                  let height = slotHeightPx(entry.startTime, entry.endTime);
+                  if (height < 20) height = 20; // Minimum visual height
+                  
                   const color = deptColor(entry.department);
                   return (
                     <button

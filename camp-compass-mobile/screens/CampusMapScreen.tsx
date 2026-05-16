@@ -1,21 +1,54 @@
 import { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Image, Linking, Platform } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { AppShell } from '@/components/AppShell';
-import { MapPin, Building2, Navigation, ChevronLeft } from 'lucide-react-native';
-import { campuses, buildings, halls } from '@/data/mockData';
+import { MapPin, Building2, Navigation, ChevronLeft, ExternalLink } from 'lucide-react-native';
+import { dataService } from '@/services/dataService';
 
 export default function CampusMapScreen() {
   const params = useLocalSearchParams<{ buildingId?: string; floor?: string; hallCode?: string }>();
 
-  const [selectedCampus, setSelectedCampus] = useState(campuses[0]);
+  const [campuses, setCampuses] = useState<any[]>([]);
+  const [buildings, setBuildings] = useState<any[]>([]);
+  const [halls, setHalls] = useState<any[]>([]);
+  const [floorsData, setFloorsData] = useState<any[]>([]);
+  
+  const [selectedCampus, setSelectedCampus] = useState<any | null>(null);
   const [selectedBuilding, setSelectedBuilding] = useState<string | null>(null);
   const [activeFloor, setActiveFloor] = useState<number>(1);
   const [highlightHall, setHighlightHall] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadData() {
+      try {
+        const [campusRes, buildingRes, hallRes, floorRes] = await Promise.all([
+          dataService.getCampuses(),
+          dataService.getBuildings(),
+          dataService.getHalls(),
+          dataService.getFloors(),
+        ]);
+        
+        if (campusRes.data) setCampuses(campusRes.data);
+        if (buildingRes.data) setBuildings(buildingRes.data);
+        if (hallRes.data) setHalls(hallRes.data);
+        if (floorRes.data) setFloorsData(floorRes.data);
+        
+        if (campusRes.data && campusRes.data.length > 0 && !selectedCampus) {
+          setSelectedCampus(campusRes.data[0]);
+        }
+      } catch (err) {
+        console.error("Failed to load map data", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadData();
+  }, []);
 
   // Deep-link: auto-open building/floor/hall from timetable
   useEffect(() => {
-    if (params.buildingId) {
+    if (params.buildingId && buildings.length > 0) {
       const building = buildings.find((b) => b.id === params.buildingId);
       if (building) {
         const campus = campuses.find((c) => c.id === building.campusId);
@@ -25,22 +58,55 @@ export default function CampusMapScreen() {
         setHighlightHall(params.hallCode ?? null);
       }
     }
-  }, [params.buildingId]);
+  }, [params.buildingId, buildings, campuses]);
+
+  if (loading || !selectedCampus) {
+    return (
+      <AppShell title="Campus Map">
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <Text>Loading Map Data...</Text>
+        </View>
+      </AppShell>
+    );
+  }
 
   const campusBuildings = buildings.filter((b) => b.campusId === selectedCampus.id);
   const selectedBuildingData = buildings.find((b) => b.id === selectedBuilding);
 
   const floorHalls = selectedBuilding
-    ? halls.filter((h) => h.buildingId === selectedBuilding && h.floor === activeFloor)
-    : [];
-
-  const allBuildingHalls = selectedBuilding
-    ? halls.filter((h) => h.buildingId === selectedBuilding)
+    ? halls.filter((h) => h.building?.id === selectedBuilding && (h.floor === activeFloor || h.floorRef?.floorNum === activeFloor || h.floorId === floorsData.find(f => f.floorNum === activeFloor && f.buildingId === selectedBuilding)?.id))
     : [];
 
   const floorNumbers = selectedBuildingData
     ? Array.from({ length: selectedBuildingData.floors }, (_, i) => i + 1)
     : [];
+
+  const activeFloorData = floorsData.find(f => f.buildingId === selectedBuilding && f.floorNum === activeFloor);
+
+  const openGoogleMaps = () => {
+    if (!selectedBuildingData || !selectedBuildingData.latitude || !selectedBuildingData.longitude) {
+      alert("No coordinates available for this building.");
+      return;
+    }
+    const lat = selectedBuildingData.latitude;
+    const lng = selectedBuildingData.longitude;
+    const label = encodeURIComponent(selectedBuildingData.name);
+    
+    const url = Platform.select({
+      ios: `maps:0,0?q=${label}@${lat},${lng}`,
+      android: `geo:0,0?q=${lat},${lng}(${label})`
+    });
+
+    if (url) {
+      Linking.canOpenURL(url).then(supported => {
+        if (supported) {
+          Linking.openURL(url);
+        } else {
+          Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${lat},${lng}`);
+        }
+      });
+    }
+  };
 
   return (
     <AppShell title="Campus Map">
@@ -64,11 +130,11 @@ export default function CampusMapScreen() {
       <View style={styles.infoBox}>
         <View style={styles.infoRow}>
           <MapPin color="#6B7280" size={14} />
-          <Text style={styles.infoText}>{selectedCampus.city}</Text>
+          <Text style={styles.infoText}>{selectedCampus.city || 'Unknown City'}</Text>
         </View>
         <View style={styles.infoRow}>
           <Navigation color="#6B7280" size={14} />
-          <Text style={styles.infoText}>{selectedCampus.region} Region</Text>
+          <Text style={styles.infoText}>{selectedCampus.region || 'Unknown'} Region</Text>
         </View>
       </View>
 
@@ -102,26 +168,28 @@ export default function CampusMapScreen() {
             ))}
           </ScrollView>
 
-          {/* Floor plan placeholder */}
-          <View style={styles.mapImageWrap}>
-            <Building2 color="#9CA3AF" size={40} />
-            <Text style={styles.mapPlaceholderText}>{selectedBuildingData?.name}</Text>
-            <Text style={styles.mapPlaceholderSub}>Floor {activeFloor} Plan</Text>
-
-            {/* Hall markers */}
-            {floorHalls.slice(0, 4).map((hall, i) => (
-              <View
-                key={hall.id}
-                style={[
-                  styles.hallMarker,
-                  { left: `${15 + i * 22}%` as any, top: `${30 + (i % 2) * 30}%` as any },
-                  highlightHall === hall.code && styles.hallMarkerHighlight,
-                ]}
-              >
-                <Text style={styles.hallMarkerCode}>{hall.code}</Text>
-              </View>
-            ))}
-          </View>
+          {/* Floor plan rendering */}
+          {activeFloorData?.floorPlan ? (
+             <View style={styles.mapImageWrap}>
+               <Image 
+                 source={{ uri: activeFloorData.floorPlan }} 
+                 style={{ width: '100%', height: '100%', position: 'absolute' }}
+                 resizeMode="cover"
+               />
+               {/* Note: since image overlays the background, hall markers logic is kept simple here */}
+             </View>
+          ) : (
+            <View style={styles.mapImageWrap}>
+              <Building2 color="#9CA3AF" size={40} />
+              <Text style={styles.mapPlaceholderText}>No Floor Plan Available</Text>
+              <Text style={styles.mapPlaceholderSub}>For Floor {activeFloor}</Text>
+              
+              <TouchableOpacity style={styles.externalMapBtn} onPress={openGoogleMaps}>
+                <ExternalLink color="#fff" size={16} />
+                <Text style={styles.externalMapBtnText}>Open in Google Maps</Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
           {/* Halls on this floor */}
           <Text style={styles.sectionTitle}>
@@ -135,12 +203,12 @@ export default function CampusMapScreen() {
             floorHalls.map((hall) => (
               <View
                 key={hall.id}
-                style={[styles.hallCard, highlightHall === hall.code && styles.hallCardHighlight]}
+                style={[styles.hallCard, highlightHall === (hall.code || hall.name) && styles.hallCardHighlight]}
               >
                 <View style={styles.hallCardLeft}>
-                  <Text style={styles.hallCode}>{hall.code}</Text>
+                  <Text style={styles.hallCode}>{hall.code || hall.name}</Text>
                   <Text style={styles.hallName}>{hall.name}</Text>
-                  <Text style={styles.hallMeta}>Floor {hall.floor} · Capacity: {hall.capacity} · {hall.type}</Text>
+                  <Text style={styles.hallMeta}>Capacity: {hall.capacity}</Text>
                 </View>
                 <View style={[styles.hallStatus, { backgroundColor: hall.available ? '#DCFCE7' : '#FEE2E2' }]}>
                   <Text style={[styles.hallStatusText, { color: hall.available ? '#16A34A' : '#DC2626' }]}>
@@ -166,12 +234,12 @@ export default function CampusMapScreen() {
               </View>
               <View style={styles.buildingInfo}>
                 <Text style={styles.buildingName}>{building.name}</Text>
-                <Text style={styles.buildingCode}>{building.code}</Text>
+                <Text style={styles.buildingCode}>{building.code || 'No Code'}</Text>
                 <Text style={styles.buildingFloors}>{building.floors} floors</Text>
               </View>
               <View style={styles.hallsCount}>
                 <Text style={styles.hallsCountNum}>
-                  {halls.filter((h) => h.buildingId === building.id).length}
+                  {halls.filter((h) => h.building?.id === building.id).length}
                 </Text>
                 <Text style={styles.hallsCountLabel}>halls</Text>
               </View>
@@ -215,13 +283,13 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', gap: 6,
   },
   mapPlaceholderText: { fontSize: 15, fontWeight: '700', color: '#6B7280' },
-  mapPlaceholderSub: { fontSize: 12, color: '#9CA3AF' },
-  hallMarker: {
-    position: 'absolute', backgroundColor: '#2563EB',
-    borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6,
+  mapPlaceholderSub: { fontSize: 12, color: '#9CA3AF', marginBottom: 10 },
+  externalMapBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: '#2563EB', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8,
+    marginTop: 8,
   },
-  hallMarkerHighlight: { backgroundColor: '#DC2626', transform: [{ scale: 1.15 }] },
-  hallMarkerCode: { color: '#fff', fontSize: 11, fontWeight: '700' },
+  externalMapBtnText: { color: '#fff', fontSize: 13, fontWeight: '600' },
   noHalls: { fontSize: 13, color: '#9CA3AF', textAlign: 'center', paddingVertical: 20 },
   hallCard: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
