@@ -5,7 +5,8 @@ export interface Hall {
   name: string;
   capacity: number;
   available: boolean;
-  floor: number;
+  floor?: number | { floorNum: number };
+  floorId?: string;
   building: {
     id: string;
     name: string;
@@ -18,6 +19,13 @@ export interface Hall {
   createdAt: string;
 }
 
+export interface Floor {
+  id: string;
+  buildingId: string;
+  floorNum: number;
+  floorPlan?: string; // We'll handle Bytes/base64 on backend, frontend sees string/null
+}
+
 export interface Building {
   id: string;
   name: string;
@@ -26,8 +34,10 @@ export interface Building {
   campus?: {
     id: string;
     name: string;
+    institutionId: string;
   };
   floors: number;
+  floorRefs?: Floor[];
   latitude?: number;
   longitude?: number;
   createdAt: string;
@@ -41,6 +51,23 @@ export interface Course {
   level: string;
   instructor: string;
   createdAt: string;
+}
+
+export interface Department {
+  id: string;
+  departmentName: string;
+  institutionId: string;
+  institution?: {
+    id: string;
+    name: string;
+  };
+}
+
+export interface Level {
+  id: string;
+  level: number;
+  departmentId: string;
+  department?: Department;
 }
 
 export interface Campus {
@@ -252,6 +279,27 @@ export class DataService {
     return apiClient.delete(`/api/buildings/${id}`);
   }
 
+  // Floor endpoints
+  async getFloors(): Promise<ApiResponse<Floor[]>> {
+    return apiClient.get<Floor[]>('/api/floors');
+  }
+
+  async getFloor(id: string): Promise<ApiResponse<Floor>> {
+    return apiClient.get<Floor>(`/api/floors/${id}`);
+  }
+
+  async createFloor(data: Omit<Floor, 'id'>): Promise<ApiResponse<Floor>> {
+    return apiClient.post<Floor>('/api/floors', data);
+  }
+
+  async updateFloor(id: string, data: Partial<Floor>): Promise<ApiResponse<Floor>> {
+    return apiClient.put<Floor>(`/api/floors/${id}`, data);
+  }
+
+  async deleteFloor(id: string): Promise<ApiResponse<{ message: string }>> {
+    return apiClient.delete(`/api/floors/${id}`);
+  }
+
   // User endpoints
   async getInstitutions(): Promise<ApiResponse<Institution[]>> {
     return apiClient.get<Institution[]>('/api/institutions');
@@ -279,6 +327,16 @@ export class DataService {
 
   async deleteUser(id: string): Promise<ApiResponse<{ message: string }>> {
     return apiClient.delete(`/api/users/${id}`);
+  }
+
+  // Department endpoints
+  async getDepartments(): Promise<ApiResponse<Department[]>> {
+    return apiClient.get<Department[]>('/api/departments');
+  }
+  
+  // Level endpoints
+  async getLevels(): Promise<ApiResponse<Level[]>> {
+    return apiClient.get<Level[]>('/api/levels');
   }
 
   // Timetable endpoints

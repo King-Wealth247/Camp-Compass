@@ -109,11 +109,11 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
 
     if (user.role === "admin") {
       baseItems.push(
-        { icon: Calendar, label: "Timetables", path: "/dashboard/timetable" },
-        { icon: Building2, label: "Hall Search", path: "/dashboard/halls" },
-        { icon: Clock, label: "Availability", path: "/dashboard/availability" },
-        { icon: Bell, label: "Notifications", path: "/dashboard/notifications" },
-        { icon: Settings, label: "Profile", path: "/dashboard/profile" }
+        { icon: Building2, label: "Infrastructure Management", path: "/dashboard/admin/infrastructure" },
+        { icon: Calendar, label: "Timetable Management", path: "/dashboard/admin/timetables" },
+        { icon: Clock, label: "Submissions", path: "/dashboard/admin/submissions" },
+        { icon: Bell, label: "Notifications", path: "/dashboard/admin/notifications" },
+        { icon: Settings, label: "Profile", path: "/dashboard/admin/profile" }
       );
     }
 

@@ -15,7 +15,13 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    return NextResponse.json(floors);
+    // Map Bytes back to base64 string for the frontend
+    const mappedFloors = floors.map(floor => ({
+      ...floor,
+      floorPlan: floor.floorPlan ? `data:image/jpeg;base64,${floor.floorPlan.toString('base64')}` : null,
+    }));
+
+    return NextResponse.json(mappedFloors);
   } catch (error) {
     console.error(error);
     return NextResponse.json({ error: 'Failed to fetch floors' }, { status: 500 });
@@ -31,11 +37,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
+    // Convert base64 string to Buffer for Prisma Bytes type
+    let floorPlanBytes = null;
+    if (floorPlan) {
+      // Remove data URL prefix if present
+      const base64Data = floorPlan.includes(',') ? floorPlan.split(',')[1] : floorPlan;
+      floorPlanBytes = Buffer.from(base64Data, 'base64');
+    }
+
     const floor = await prisma.floor.create({
       data: {
         buildingId,
         floorNum: parseInt(floorNum),
-        floorPlan,
+        floorPlan: floorPlanBytes,
       },
     });
 

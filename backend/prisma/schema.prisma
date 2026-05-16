@@ -85,7 +85,7 @@ model Floor {
   buildingId String
   building   Building @relation(fields: [buildingId], references: [id])
   floorNum   Int
-  floorPlan  String?
+  floorPlan  Bytes?
   halls      Hall[]
 }
 
