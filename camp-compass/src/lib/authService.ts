@@ -24,6 +24,7 @@ export interface RegistrarRegisterStudentPayload {
   institutionId: string;
   department: string;
   level: string;
+  regEmail: string;
   tuitionFullyPaid: boolean;
 }
 
@@ -33,6 +34,7 @@ export interface RegistrarRegisterStaffPayload {
   phone: string;
   institutionId: string;
   department: string;
+  regEmail: string;
   courseTaught: string;
 }
 

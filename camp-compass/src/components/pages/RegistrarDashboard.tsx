@@ -16,6 +16,7 @@ const emptyForm = {
   department: "Computer Science",
   level: "Year 1",
   courseTaught: "",
+  regEmail: "",
   tuitionFullyPaid: true,
 };
 
@@ -88,6 +89,7 @@ export function RegistrarDashboard() {
             institutionId: formState.institutionId,
             department: formState.department,
             level: formState.level,
+            regEmail: formState.regEmail,
             tuitionFullyPaid: formState.tuitionFullyPaid,
           })
         : await authService.registerByRegistrar({
@@ -96,6 +98,7 @@ export function RegistrarDashboard() {
             phone: formState.phone,
             institutionId: formState.institutionId,
             department: formState.department,
+            regEmail: formState.regEmail,
             courseTaught: formState.courseTaught,
           });
 
@@ -252,6 +255,18 @@ export function RegistrarDashboard() {
                   </div>
 
                   <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Personal Email (For receiving credentials)</label>
+                    <input
+                      required
+                      value={formState.regEmail}
+                      onChange={(e) => setFormState({ ...formState, regEmail: e.target.value })}
+                      type="email"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                      placeholder="user@example.com"
+                    />
+                  </div>
+
+                  <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-2">Institution</label>
                     <select
                       required
@@ -298,14 +313,13 @@ export function RegistrarDashboard() {
                       </select>
                     </div>
                   ) : (
-                    <div>
+                    <div className="hidden">
                       <label className="block text-sm font-medium text-gray-700 mb-2">Course taught</label>
                       <input
-                        required
                         value={formState.courseTaught}
                         onChange={(e) => setFormState({ ...formState, courseTaught: e.target.value })}
                         type="text"
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none pointer-events-none opacity-50"
                         placeholder="e.g. CS101 — Introduction to Programming"
                       />
                     </div>

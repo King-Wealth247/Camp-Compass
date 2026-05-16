@@ -2,6 +2,7 @@ import { randomInt } from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { hashPassword, verifyToken } from '@/lib/auth';
+import { sendRegistrationEmail } from '@/lib/mailer';
 
 function slugForEmailSegment(raw: string): string {
   const base = raw
@@ -148,6 +149,14 @@ export async function POST(req: NextRequest) {
           createdAt: true,
         },
       });
+
+      // Send the auto-generated credentials to the provided regEmail
+      await sendRegistrationEmail(
+        regEmail,
+        email,
+        plainPassword,
+        name
+      );
 
       return NextResponse.json({
         ...user,

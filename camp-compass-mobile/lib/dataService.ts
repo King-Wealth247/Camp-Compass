@@ -248,6 +248,15 @@ export class DataService {
   async saveFcmToken(token: string): Promise<ApiResponse<any>> {
     return apiClient.post<any>('/api/users/fcm-token', { token });
   }
+
+  // Profile endpoints
+  async getCurrentUserProfile(): Promise<ApiResponse<any>> {
+    return apiClient.get<any>('/api/users/me');
+  }
+
+  async updateUser(id: string, data: { name?: string; phone?: string; email?: string }): Promise<ApiResponse<any>> {
+    return apiClient.put<any>(`/api/users/${id}`, data);
+  }
 }
 
 export const dataService = new DataService();

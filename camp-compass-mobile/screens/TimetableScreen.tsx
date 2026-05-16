@@ -7,7 +7,7 @@ import { useAuth } from '@/context/AuthContext';
 import { AppShell } from '@/components/AppShell';
 import { MapPin, User, X, ChevronDown } from 'lucide-react-native';
 import { TimetableEntry } from '@/data/mockData';
-import { dataService } from '@/services/dataService';
+import { dataService } from '@/lib/dataService';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 const TIME_SLOTS = ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00'];

@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Image, Linking, P
 import { useLocalSearchParams } from 'expo-router';
 import { AppShell } from '@/components/AppShell';
 import { MapPin, Building2, Navigation, ChevronLeft, ExternalLink } from 'lucide-react-native';
-import { dataService } from '@/services/dataService';
+import { dataService } from '@/lib/dataService';
 
 export default function CampusMapScreen() {
   const params = useLocalSearchParams<{ buildingId?: string; floor?: string; hallCode?: string }>();

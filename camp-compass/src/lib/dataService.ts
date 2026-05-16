@@ -97,6 +97,7 @@ export interface User {
   levelId?: string;
   level?: string;
   courseTaught?: string | null;
+  regEmail?: string | null;
   tuitionPaid: boolean;
   institutionId: string;
   createdAt: string;
