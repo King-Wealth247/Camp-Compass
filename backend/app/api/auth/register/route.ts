@@ -28,8 +28,11 @@ type RegistrarBody =
       name: string;
       phone: string;
       institutionId: string;
+      departmentId: string;
       department: string;
-      level: string;
+      levelId: string;
+      level: number;
+      regEmail: string;
       tuitionFullyPaid: boolean;
     }
   | {
@@ -37,8 +40,9 @@ type RegistrarBody =
       name: string;
       phone: string;
       institutionId: string;
+      departmentId: string;
       department: string;
-      courseTaught: string;
+      regEmail: string;
     };
 
 export async function POST(req: NextRequest) {
@@ -67,9 +71,11 @@ export async function POST(req: NextRequest) {
   const name = typeof body.name === 'string' ? body.name.trim() : '';
   const phone = typeof body.phone === 'string' ? body.phone.trim() : '';
   const institutionId = typeof body.institutionId === 'string' ? body.institutionId.trim() : '';
+  const departmentId = typeof body.departmentId === 'string' ? body.departmentId.trim() : '';
   const department = typeof body.department === 'string' ? body.department.trim() : '';
+  const regEmail = typeof body.regEmail === 'string' ? body.regEmail.trim() : '';
 
-  if (!name || !phone || !institutionId || !department) {
+  if (!name || !phone || !institutionId || !departmentId || !department || !regEmail) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
   }
 
@@ -81,24 +87,20 @@ export async function POST(req: NextRequest) {
   const instSlug = slugForEmailSegment(institution.name);
   const nameSlug = slugForEmailSegment(name);
 
-  let level: string | null = null;
+  let levelId: string | null = null;
+  let level: number | null = null;
   let tuitionPaid = false;
-  let courseTaught: string | null = null;
 
   if (body.role === 'student') {
-    level = typeof body.level === 'string' ? body.level.trim() : '';
-    if (!level) {
-      return NextResponse.json({ error: 'Level is required for students' }, { status: 400 });
+    levelId = typeof body.levelId === 'string' ? body.levelId.trim() : '';
+    level = typeof body.level === 'number' ? body.level : parseInt(body.level as any);
+    if (!levelId || isNaN(level)) {
+      return NextResponse.json({ error: 'Level and LevelId are required for students' }, { status: 400 });
     }
     if (typeof body.tuitionFullyPaid !== 'boolean') {
       return NextResponse.json({ error: 'Tuition status is required' }, { status: 400 });
     }
     tuitionPaid = body.tuitionFullyPaid;
-  } else {
-    courseTaught = typeof body.courseTaught === 'string' ? body.courseTaught.trim() : '';
-    if (!courseTaught) {
-      return NextResponse.json({ error: 'Course taught is required for staff' }, { status: 400 });
-    }
   }
 
   const plainPassword = generatePassword();
@@ -122,22 +124,26 @@ export async function POST(req: NextRequest) {
           name,
           phone,
           role: body.role,
+          departmentId,
           department,
+          levelId,
           level,
-          courseTaught,
           tuitionPaid,
           institutionId,
+          regEmail,
         },
         select: {
           id: true,
           email: true,
           name: true,
           role: true,
+          departmentId: true,
           department: true,
+          levelId: true,
           level: true,
-          courseTaught: true,
           tuitionPaid: true,
           institutionId: true,
+          regEmail: true,
           phone: true,
           createdAt: true,
         },

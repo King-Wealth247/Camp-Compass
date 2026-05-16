@@ -8,3 +8,21 @@ export async function GET() {
 
   return NextResponse.json(courses);
 }
+
+export async function POST(req: Request) {
+  const body = await req.json();
+  const course = await prisma.course.create({
+    data: {
+      code: body.code,
+      title: body.title,
+      departmentId: body.departmentId,
+      department: body.department,
+      levelId: body.levelId,
+      level: parseInt(body.level),
+      instructorId: body.instructorId,
+      instructor: body.instructor,
+    },
+  });
+
+  return NextResponse.json(course, { status: 201 });
+}

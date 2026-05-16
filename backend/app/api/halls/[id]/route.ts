@@ -36,6 +36,8 @@ export async function PUT(
     data: {
       name: body.name,
       capacity: body.capacity,
+      floorId: body.floorId,
+      floor: body.floor !== undefined ? parseInt(body.floor) : undefined,
       buildingId: body.buildingId,
       isAvailable: body.isAvailable ?? body.available,
     },

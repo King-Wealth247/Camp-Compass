@@ -29,8 +29,11 @@ export async function PUT(
     data: {
       code: body.code,
       title: body.title,
+      departmentId: body.departmentId,
       department: body.department,
-      level: body.level,
+      levelId: body.levelId,
+      level: body.level !== undefined ? parseInt(body.level) : undefined,
+      instructorId: body.instructorId,
       instructor: body.instructor,
     },
   });

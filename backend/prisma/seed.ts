@@ -6,159 +6,231 @@ const prisma = new PrismaClient();
 async function main() {
   const hashedPassword = bcrypt.hashSync('password123', 10);
 
-  // Create 2 institutions
+  // 1. Create Institutions
+  const institutionNames = ['University of Technology', 'Global Business School'];
   const institutions = [];
-  for (let i = 1; i <= 2; i++) {
-    const institution = await prisma.institution.upsert({
-      where: { id: `inst-${i}` },
-      update: {},
-      create: {
-        id: `inst-${i}`,
-        name: `Institution ${i}`,
-      },
+  for (const name of institutionNames) {
+    const institution = await prisma.institution.create({
+      data: { name },
     });
     institutions.push(institution);
   }
 
-  await prisma.user.upsert({
-    where: { email: 'registrar@test.com' },
-    update: {
-      role: 'registrar',
-      institutionId: institutions[0].id,
-    },
-    create: {
-      id: 'seed-registrar',
+  // 2. Create Campuses
+  const campusNames = ['Main Campus', 'Downtown Campus', 'North Campus'];
+  const campuses = [];
+  for (const inst of institutions) {
+    for (const cName of campusNames) {
+      const campus = await prisma.campus.create({
+        data: {
+          name: cName,
+          city: 'Metropolis',
+          region: 'State',
+          latitude: 40.7128,
+          longitude: -74.0060,
+          institutionId: inst.id,
+        },
+      });
+      campuses.push(campus);
+    }
+  }
+
+  // 3. Create Departments
+  const deptNames = ['Computer Science', 'Mechanical Engineering', 'Business Administration', 'Mathematics'];
+  const departments = [];
+  for (const inst of institutions) {
+    const mainCampus = campuses.find(c => c.institutionId === inst.id);
+    for (const deptName of deptNames) {
+      const dept = await prisma.department.create({
+        data: {
+          institutionId: inst.id,
+          departmentName: deptName,
+          mainCampusId: mainCampus?.id,
+        },
+      });
+      departments.push(dept);
+    }
+  }
+
+  // 4. Create Levels
+  const levels = [];
+  for (const dept of departments) {
+    for (let i = 1; i <= 4; i++) {
+      const level = await prisma.level.create({
+        data: {
+          departmentId: dept.id,
+          level: i,
+        },
+      });
+      levels.push(level);
+    }
+  }
+
+  // 5. Create Buildings & Floors & Halls
+  const buildingNames = ['Engineering Block', 'Science Tower', 'Business Hub', 'Liberal Arts Center'];
+  const hallsList = [];
+  for (const campus of campuses) {
+    for (const bName of buildingNames) {
+      const building = await prisma.building.create({
+        data: {
+          name: bName,
+          code: bName.substring(0, 3).toUpperCase(),
+          campusId: campus.id,
+          floors: 3,
+          latitude: 40.7128,
+          longitude: -74.0060,
+        },
+      });
+
+      for (let floorNum = 1; floorNum <= building.floors; floorNum++) {
+        const floor = await prisma.floor.create({
+          data: {
+            buildingId: building.id,
+            floorNum: floorNum,
+          },
+        });
+
+        // Add halls for each floor
+        for (let hallNum = 1; hallNum <= 3; hallNum++) {
+          const hall = await prisma.hall.create({
+            data: {
+              name: `Room ${floorNum}0${hallNum}`,
+              capacity: 50,
+              floorId: floor.id,
+              floor: floorNum,
+              buildingId: building.id,
+              isAvailable: true,
+            },
+          });
+          hallsList.push(hall);
+        }
+      }
+    }
+  }
+
+  // 6. Create Users
+  const users = [];
+
+  // Registrar
+  users.push(await prisma.user.create({
+    data: {
       email: 'registrar@test.com',
       password: hashedPassword,
-      name: 'Seed Registrar',
+      name: 'Robert Collins',
       role: 'registrar',
-      department: 'Registrar Office',
       institutionId: institutions[0].id,
+      regEmail: 'personal.robert@gmail.com',
     },
-  });
+  }));
 
-  // Create 5 campuses: 3 for inst-1, 2 for inst-2
-  const campuses = [];
-  for (let i = 1; i <= 5; i++) {
-    const institutionId = i <= 3 ? institutions[0].id : institutions[1].id;
-    const campus = await prisma.campus.upsert({
-      where: { id: `campus-${i}` },
-      update: {},
-      create: {
-        id: `campus-${i}`,
-        name: `Campus ${i}`,
-        city: `City ${i}`,
-        region: `Region ${Math.floor((i-1)/2) + 1}`,
-        latitude: 40.7128 + Math.random() * 0.1,
-        longitude: -74.006 + Math.random() * 0.1,
-        institutionId,
+  // Admins
+  const adminNames = ['Alice Johnson', 'Michael Brown'];
+  for (const name of adminNames) {
+    users.push(await prisma.user.create({
+      data: {
+        email: `${name.toLowerCase().replace(' ', '.')}@test.com`,
+        password: hashedPassword,
+        name: name,
+        role: 'admin',
+        institutionId: institutions[0].id,
       },
-    });
-    campuses.push(campus);
+    }));
   }
 
-  // Create 20 buildings, distributed across campuses
-  const buildings = [];
-  for (let i = 1; i <= 20; i++) {
-    const campusId = campuses[(i-1) % campuses.length].id;
-    const building = await prisma.building.upsert({
-      where: { id: `building-${i}` },
-      update: {},
-      create: {
-        id: `building-${i}`,
-        name: `Building ${i}`,
-        code: `B${i}`,
-        campusId,
-        floors: Math.floor(Math.random() * 5) + 1,
-        latitude: 40.7128 + Math.random() * 0.1,
-        longitude: -74.006 + Math.random() * 0.1,
+  // Staff (Instructors)
+  const staffNames = ['Dr. Sarah Williams', 'Prof. David Miller', 'Dr. Emily Davis', 'Prof. James Wilson', 'Dr. Emma Taylor'];
+  const staffUsers = [];
+  for (const name of staffNames) {
+    const dept = departments[Math.floor(Math.random() * departments.length)];
+    const staff = await prisma.user.create({
+      data: {
+        email: `${name.split(' ')[1].toLowerCase()}@test.com`,
+        password: hashedPassword,
+        name: name,
+        role: 'staff',
+        departmentId: dept.id,
+        department: dept.departmentName,
+        institutionId: dept.institutionId,
       },
     });
-    buildings.push(building);
+    users.push(staff);
+    staffUsers.push(staff);
   }
 
-  // Create at least 50 halls
-  const halls = [];
-  for (let i = 1; i <= 50; i++) {
-    const buildingId = buildings[(i-1) % buildings.length].id;
-    const hall = await prisma.hall.upsert({
-      where: { id: `hall-${i}` },
-      update: {},
-      create: {
-        id: `hall-${i}`,
-        name: `Hall ${i}`,
-        capacity: Math.floor(Math.random() * 200) + 20,
-        floor: Math.floor(Math.random() * 5) + 1,
-        buildingId,
-        isAvailable: Math.random() > 0.5,
+  // Students
+  const studentNames = ['Olivia Martinez', 'Liam Anderson', 'Sophia Thomas', 'Jackson Jackson', 'Ava White', 'Lucas Harris', 'Mia Martin', 'Ethan Thompson', 'Isabella Garcia', 'Mason Martinez'];
+  for (const name of studentNames) {
+    const dept = departments[Math.floor(Math.random() * departments.length)];
+    const deptLevels = levels.filter(l => l.departmentId === dept.id);
+    const level = deptLevels[Math.floor(Math.random() * deptLevels.length)];
+
+    users.push(await prisma.user.create({
+      data: {
+        email: `${name.toLowerCase().replace(' ', '.')}@student.com`,
+        password: hashedPassword,
+        name: name,
+        role: 'student',
+        departmentId: dept.id,
+        department: dept.departmentName,
+        levelId: level.id,
+        level: level.level,
+        tuitionPaid: true,
+        institutionId: dept.institutionId,
+        regEmail: `personal.${name.split(' ')[0].toLowerCase()}@gmail.com`,
       },
-    });
-    halls.push(hall);
+    }));
   }
 
-  // Create at least 50 courses
+  // 7. Create Courses
+  const courseTitles = ['Introduction to Programming', 'Calculus I', 'Business Ethics', 'Physics Mechanics', 'Data Structures'];
   const courses = [];
-  const departments = ['Computer Science', 'Engineering', 'Mathematics', 'Physics', 'Chemistry'];
-  const levels = ['100', '200', '300', '400'];
-  for (let i = 1; i <= 50; i++) {
-    const course = await prisma.course.upsert({
-      where: { id: `course-${i}` },
-      update: {},
-      create: {
-        id: `course-${i}`,
-        code: `CS${i}`,
-        title: `Course ${i}`,
-        department: departments[Math.floor(Math.random() * departments.length)],
-        level: levels[Math.floor(Math.random() * levels.length)],
-        instructor: `Instructor ${i}`,
+  for (let i = 0; i < 20; i++) {
+    const dept = departments[Math.floor(Math.random() * departments.length)];
+    const deptLevels = levels.filter(l => l.departmentId === dept.id);
+    const level = deptLevels[Math.floor(Math.random() * deptLevels.length)];
+    const instructor = staffUsers[Math.floor(Math.random() * staffUsers.length)];
+    const title = courseTitles[Math.floor(Math.random() * courseTitles.length)];
+
+    const course = await prisma.course.create({
+      data: {
+        code: `${dept.departmentName.substring(0, 3).toUpperCase()}${100 + i}`,
+        title: `${title} ${i+1}`,
+        departmentId: dept.id,
+        department: dept.departmentName,
+        levelId: level.id,
+        level: level.level,
+        instructorId: instructor.id,
+        instructor: instructor.name,
       },
     });
     courses.push(course);
   }
 
-  // Create at least 50 users
-  const users = [];
-  const roles: ('student' | 'staff' | 'admin' | 'registrar')[] = ['student', 'staff', 'admin', 'registrar'];
-  for (let i = 1; i <= 50; i++) {
-    const institutionId = institutions[Math.floor(Math.random() * institutions.length)].id;
-    const user = await prisma.user.upsert({
-      where: { id: `user-${i}` },
-      update: {},
-      create: {
-        id: `user-${i}`,
-        email: `user${i}@test.com`,
-        password: hashedPassword,
-        name: `User ${i}`,
-        role: roles[Math.floor(Math.random() * roles.length)],
-        department: departments[Math.floor(Math.random() * departments.length)],
-        level: levels[Math.floor(Math.random() * levels.length)],
-        tuitionPaid: Math.random() > 0.5,
-        institutionId,
-      },
-    });
-    users.push(user);
-  }
-
-  // Create at least 50 timetables
+  // 8. Create Timetables
   const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-  for (let i = 1; i <= 50; i++) {
-    const campusId = campuses[Math.floor(Math.random() * campuses.length)].id;
-    const courseId = courses[Math.floor(Math.random() * courses.length)].id;
-    const hallId = halls[Math.floor(Math.random() * halls.length)].id;
+  for (let i = 0; i < 30; i++) {
+    const course = courses[Math.floor(Math.random() * courses.length)];
+    // Find campus for course department
+    const dept = departments.find(d => d.id === course.departmentId);
+    if (!dept) continue;
+    const campus = campuses.find(c => c.id === dept.mainCampusId) || campuses[0];
+    
+    // Find hall in this campus
+    const campusBuildings = buildingNames.map(b => b); // Dummy
+    const hall = hallsList[Math.floor(Math.random() * hallsList.length)];
+    
     const startHour = Math.floor(Math.random() * 8) + 8; // 8 AM to 4 PM
     const startTime = new Date();
     startTime.setHours(startHour, 0, 0, 0);
     const endTime = new Date(startTime);
-    endTime.setHours(startHour + 1);
+    endTime.setHours(startHour + 2);
     const day = days[Math.floor(Math.random() * days.length)];
-    await prisma.timetable.upsert({
-      where: { id: `timetable-${i}` },
-      update: {},
-      create: {
-        id: `timetable-${i}`,
-        campusId,
-        courseId,
-        hallId,
+
+    await prisma.timetable.create({
+      data: {
+        campusId: campus.id,
+        courseId: course.id,
+        hallId: hall.id,
         startTime,
         endTime,
         day,
@@ -166,53 +238,30 @@ async function main() {
     });
   }
 
-  // Create at least 50 availabilities (for staff users)
-  const staffUsers = users.filter(u => u.role === 'staff');
-  for (let i = 1; i <= 50; i++) {
-    const lecturerId = staffUsers[Math.floor(Math.random() * staffUsers.length)].id;
-    await prisma.availability.upsert({
-      where: { id: `availability-${i}` },
-      update: {},
-      create: {
-        id: `availability-${i}`,
-        lecturerId,
-        monday: Math.random() > 0.5,
-        mondayTime: Math.random() > 0.5 ? '09:00-11:00' : null,
-        tuesday: Math.random() > 0.5,
-        tuesdayTime: Math.random() > 0.5 ? '10:00-12:00' : null,
-        wednesday: Math.random() > 0.5,
-        wednesdayTime: Math.random() > 0.5 ? '14:00-16:00' : null,
-        thursday: Math.random() > 0.5,
-        thursdayTime: Math.random() > 0.5 ? '13:00-15:00' : null,
-        friday: Math.random() > 0.5,
-        fridayTime: Math.random() > 0.5 ? '11:00-13:00' : null,
-        saturday: Math.random() > 0.5,
-        saturdayTime: Math.random() > 0.5 ? '08:00-10:00' : null,
+  // 9. Create Availabilities
+  for (const staff of staffUsers) {
+    await prisma.availability.create({
+      data: {
+        lecturerId: staff.id,
+        monday: true,
+        mondayTime: '09:00-11:00',
+        tuesday: false,
+        tuesdayTime: null,
+        wednesday: true,
+        wednesdayTime: '14:00-16:00',
+        thursday: false,
+        thursdayTime: null,
+        friday: true,
+        fridayTime: '11:00-13:00',
+        saturday: false,
+        saturdayTime: null,
         resubmission: 'unseen',
-        description: `Availability ${i}`,
+        description: 'Standard availability',
       },
     });
   }
 
-  // Create at least 50 notifications
-  const types = ['info', 'warning', 'error'];
-  for (let i = 1; i <= 50; i++) {
-    const userId = users[Math.floor(Math.random() * users.length)].id;
-    await prisma.notification.upsert({
-      where: { id: `notification-${i}` },
-      update: {},
-      create: {
-        id: `notification-${i}`,
-        userId,
-        title: `Notification ${i}`,
-        message: `This is notification message ${i}`,
-        type: types[Math.floor(Math.random() * types.length)],
-        read: Math.random() > 0.5,
-      },
-    });
-  }
-
-  console.log('Seeding completed');
+  console.log('Database seeded successfully with English names and new schema.');
 }
 
 main()
