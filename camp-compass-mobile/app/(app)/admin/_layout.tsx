@@ -1,6 +1,7 @@
 import { Drawer } from 'expo-router/drawer';
 import { useAuth } from '@/context/AuthContext';
 import { LayoutDashboard, Map, Calendar, Building2, Bell, Clock, User } from 'lucide-react-native';
+import { Colors } from '@/constants/theme';
 
 export default function AdminLayout() {
   const { user } = useAuth();
@@ -8,26 +9,24 @@ export default function AdminLayout() {
   if (!user || user.role !== 'admin') return null;
 
   return (
-    <Drawer screenOptions={{ 
-      headerShown: true,
-      headerTintColor: '#fff',
-      headerStyle: { backgroundColor: '#2563EB' },
-      drawerActiveTintColor: '#2563EB',
-    }}>
+    <Drawer
+      screenOptions={{
+        headerShown: true,
+        headerTintColor: '#fff',
+        headerStyle: { backgroundColor: Colors.bgHeader },
+        headerTitleStyle: { color: '#fff', fontWeight: '700', fontSize: 17 },
+        drawerActiveTintColor: Colors.primary,
+        drawerInactiveTintColor: Colors.textSecondary,
+        drawerStyle: { backgroundColor: Colors.bgCard, width: 260 },
+        drawerLabelStyle: { fontWeight: '600', fontSize: 14 },
+      }}
+    >
       <Drawer.Screen
         name="dashboard"
         options={{
           drawerLabel: 'Dashboard',
           title: 'Admin Dashboard',
-          drawerIcon: ({ color }) => <LayoutDashboard color={color} size={20} />
-        }}
-      />
-      <Drawer.Screen
-        name="infrastructure"
-        options={{
-          drawerLabel: 'Infrastructure',
-          title: 'Infrastructure Management',
-          drawerIcon: ({ color }) => <Building2 color={color} size={20} />
+          drawerIcon: ({ color }: { color: string }) => <LayoutDashboard color={color} size={20} />,
         }}
       />
       <Drawer.Screen
@@ -35,15 +34,31 @@ export default function AdminLayout() {
         options={{
           drawerLabel: 'Timetables',
           title: 'Timetable Management',
-          drawerIcon: ({ color }) => <Calendar color={color} size={20} />
+          drawerIcon: ({ color }: { color: string }) => <Calendar color={color} size={20} />,
+        }}
+      />
+      <Drawer.Screen
+        name="infrastructure"
+        options={{
+          drawerLabel: 'Infrastructure',
+          title: 'Infrastructure Management',
+          drawerIcon: ({ color }: { color: string }) => <Building2 color={color} size={20} />,
+        }}
+      />
+      <Drawer.Screen
+        name="map"
+        options={{
+          drawerLabel: 'Campus 3D Map',
+          title: 'Campus 3D Map',
+          drawerIcon: ({ color }: { color: string }) => <Map color={color} size={20} />,
         }}
       />
       <Drawer.Screen
         name="submissions"
         options={{
           drawerLabel: 'Submissions',
-          title: 'Submissions',
-          drawerIcon: ({ color }) => <Clock color={color} size={20} />
+          title: 'Availability Submissions',
+          drawerIcon: ({ color }: { color: string }) => <Clock color={color} size={20} />,
         }}
       />
       <Drawer.Screen
@@ -51,7 +66,7 @@ export default function AdminLayout() {
         options={{
           drawerLabel: 'Notifications',
           title: 'Notifications',
-          drawerIcon: ({ color }) => <Bell color={color} size={20} />
+          drawerIcon: ({ color }: { color: string }) => <Bell color={color} size={20} />,
         }}
       />
       <Drawer.Screen
@@ -59,7 +74,7 @@ export default function AdminLayout() {
         options={{
           drawerLabel: 'Profile',
           title: 'My Profile',
-          drawerIcon: ({ color }) => <User color={color} size={20} />
+          drawerIcon: ({ color }: { color: string }) => <User color={color} size={20} />,
         }}
       />
     </Drawer>

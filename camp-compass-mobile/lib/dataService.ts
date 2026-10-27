@@ -257,6 +257,50 @@ export class DataService {
   async updateUser(id: string, data: { name?: string; phone?: string; email?: string }): Promise<ApiResponse<any>> {
     return apiClient.put<any>(`/api/users/${id}`, data);
   }
+
+  // User management
+  async getUsers(role?: string): Promise<ApiResponse<any[]>> {
+    const query = role ? `?role=${encodeURIComponent(role)}` : '';
+    return apiClient.get<any[]>(`/api/users${query}`);
+  }
+
+  // Free halls endpoint (Workstream 1b)
+  async getFreeHalls(day: string, campusId?: string): Promise<ApiResponse<any>> {
+    const params = new URLSearchParams({ day });
+    if (campusId) params.set('campusId', campusId);
+    return apiClient.get<any>(`/api/halls/free?${params.toString()}`);
+  }
+
+  // Timetable generation v2 (Absolute / Batch / Unit)
+  async generateTimetableV2(params: {
+    mode: 'absolute' | 'batch' | 'unit';
+    departmentId?: string;
+    levelId?: string;
+    courseId?: string;
+    startDate?: string;
+    publishedBy?: string;
+  }): Promise<ApiResponse<any>> {
+    return apiClient.post<any>('/api/timetable/generate', params);
+  }
+
+  // Timetable publish / rollback
+  async publishTimetable(timetableId: string, publishedBy: string): Promise<ApiResponse<any>> {
+    return apiClient.post<any>('/api/timetable/publish', { timetableId, publishedBy });
+  }
+
+  async rollbackTimetable(levelId: string, departmentId: string): Promise<ApiResponse<any>> {
+    return apiClient.post<any>('/api/timetable/publish', { action: 'rollback', levelId, departmentId });
+  }
+
+  // Timetable validation
+  async validateTimetable(params?: { timetableId?: string; departmentId?: string; levelId?: string }): Promise<ApiResponse<any>> {
+    return apiClient.post<any>('/api/timetable/validate', params ?? {});
+  }
+
+  // Publication status list (for admin timetable manager)
+  async getTimetablePublicationStatus(): Promise<ApiResponse<any[]>> {
+    return apiClient.get<any[]>('/api/timetable/publish');
+  }
 }
 
 export const dataService = new DataService();

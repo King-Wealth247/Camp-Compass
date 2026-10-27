@@ -1,1 +1,2 @@
-export { default } from '@/screens/NotificationsScreen';
+import NotificationsScreen from '@/screens/NotificationsScreen';
+export default NotificationsScreen;

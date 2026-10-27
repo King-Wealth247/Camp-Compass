@@ -1,1 +1,2 @@
-export { default } from '@/screens/TimetableScreen';
+import TimetableScreen from '@/screens/TimetableScreen';
+export default TimetableScreen;

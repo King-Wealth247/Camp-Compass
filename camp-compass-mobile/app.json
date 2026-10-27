@@ -2,36 +2,68 @@
   "expo": {
     "name": "Camp-Compass",
     "slug": "camp-compass-mobile",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "scheme": "campcompass",
     "projectId": "5a2f7b25-1c4b-4e4d-9d54-8d28b3eaae8f",
     "newArchEnabled": true,
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "enabled": true,
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 0,
+      "url": "https://u.expo.dev/5a2f7b25-1c4b-4e4d-9d54-8d28b3eaae8f"
+    },
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#1d4ed8"
+      "backgroundColor": "#1E1B4B"
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.campcompass.mobile"
+      "bundleIdentifier": "com.campcompass.mobile",
+      "buildNumber": "2"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#1d4ed8"
+        "backgroundColor": "#1E1B4B"
       },
       "package": "com.campcompass.mobile",
-      "edgeToEdgeEnabled": true
+      "versionCode": 2,
+      "edgeToEdgeEnabled": true,
+      "permissions": [
+        "android.permission.INTERNET",
+        "android.permission.ACCESS_NETWORK_STATE",
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.VIBRATE",
+        "android.permission.POST_NOTIFICATIONS"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png",
       "bundler": "metro"
     },
     "plugins": [
-      "expo-router"
-    ]
+      "expo-router",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#1E1B4B",
+          "defaultChannel": "default",
+          "sounds": []
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "5a2f7b25-1c4b-4e4d-9d54-8d28b3eaae8f"
+      }
+    }
   }
 }

@@ -120,15 +120,33 @@ model Course {
   createdAt     DateTime    @default(now())
 }
 
+enum TimetableGenerationMode {
+  absolute
+  batch
+  unit
+}
+
+enum TimetableStatus {
+  draft
+  published
+  archived
+}
+
 model Timetable {
-  id            String                  @id @default(cuid())
-  departmentId  String
-  department    Department              @relation(fields: [departmentId], references: [id])
-  levelId       String
-  levelRef      Level                   @relation(fields: [levelId], references: [id])
-  level         Int
-  createdAt     DateTime                @default(now())
-  subComponents TimetableSubComponent[]
+  id              String                   @id @default(cuid())
+  departmentId    String
+  department      Department               @relation(fields: [departmentId], references: [id])
+  levelId         String
+  levelRef        Level                    @relation(fields: [levelId], references: [id])
+  level           Int
+  status          TimetableStatus          @default(draft)
+  generationMode  TimetableGenerationMode  @default(absolute)
+  publishedAt     DateTime?
+  publishedBy     String?
+  snapshotOf      String?                  // ID of the previous published version (for rollback)
+  createdAt       DateTime                 @default(now())
+  updatedAt       DateTime                 @updatedAt
+  subComponents   TimetableSubComponent[]
 }
 
 model TimetableSubComponent {
