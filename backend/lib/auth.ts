@@ -2,7 +2,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
 const SECRET = process.env.JWT_SECRET ?? 'replace-me';
-const EXPIRES_IN = process.env.JWT_EXPIRES_IN ?? '1h';
+const EXPIRES_IN = process.env.JWT_EXPIRES_IN ?? '7d';
 
 export function hashPassword(password: string) {
   return bcrypt.hash(password, 10);
