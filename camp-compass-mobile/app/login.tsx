@@ -12,10 +12,10 @@ import { Colors, Shadow, Radius, Spacing, Typography } from '@/constants/theme';
 const { width: SCREEN_W } = Dimensions.get('window');
 
 const ROLE_DEMOS = [
-  { role: 'student', label: 'Student', color: Colors.roleStudent, email: 'student@campus.edu', pass: 'student123' },
-  { role: 'staff', label: 'Lecturer', color: Colors.roleStaff, email: 'staff@campus.edu', pass: 'staff123' },
-  { role: 'admin', label: 'Admin', color: Colors.roleAdmin, email: 'admin@campus.edu', pass: 'admin123' },
-  { role: 'registrar', label: 'Registrar', color: Colors.roleRegistrar, email: 'registrar@campus.edu', pass: 'registrar123' },
+  { role: 'student', label: 'Student', color: Colors.roleStudent, email: 'kofi.acheampong@student.campcompass.edu', pass: 'password123' },
+  { role: 'staff',   label: 'Lecturer', color: Colors.roleStaff, email: 'dr.sarah.mensah@campcompass.edu', pass: 'password123' },
+  { role: 'admin',   label: 'Admin', color: Colors.roleAdmin, email: 'admin@campcompass.edu', pass: 'password123' },
+  { role: 'registrar', label: 'Registrar', color: Colors.roleRegistrar, email: 'registrar@campcompass.edu', pass: 'password123' },
 ];
 
 const FEATURES = [
@@ -82,10 +82,23 @@ export default function LoginPage() {
     }
   };
 
-  const fillDemo = (role: typeof ROLE_DEMOS[0]) => {
-    setEmail(role.email);
-    setPassword(role.pass);
+  const autoLogin = async (demo: typeof ROLE_DEMOS[0]) => {
+    setEmail(demo.email);
+    setPassword(demo.pass);
     setError('');
+    setLoading(true);
+    try {
+      const user = await login(demo.email, demo.pass);
+      if (user) {
+        router.replace(`/(app)/${user.role}/dashboard` as any);
+      } else {
+        setError('Demo login failed — check your connection.');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Demo login failed.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const logoTranslateY = floatAnim.interpolate({ inputRange: [0, 1], outputRange: [0, -8] });
@@ -219,7 +232,7 @@ export default function LoginPage() {
               <TouchableOpacity
                 key={demo.role}
                 style={[styles.demoCard, { borderColor: demo.color + '40' }]}
-                onPress={() => fillDemo(demo)}
+                onPress={() => autoLogin(demo)}
                 activeOpacity={0.75}
               >
                 <View style={[styles.demoRoleBadge, { backgroundColor: demo.color }]}>

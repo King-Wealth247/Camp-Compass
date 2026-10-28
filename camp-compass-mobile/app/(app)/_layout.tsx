@@ -1,17 +1,30 @@
-import { Stack } from 'expo-router';
+import { Stack, useRouter, useSegments } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
-import { useRouter } from 'expo-router';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 export default function AppLayout() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const router = useRouter();
+  const segments = useSegments();
+  const mounted = useRef(false);
 
   useEffect(() => {
+    // Mark as mounted after first render — Expo Router is ready now
+    mounted.current = true;
+  }, []);
+
+  useEffect(() => {
+    // Don't redirect while auth is still loading or before navigator mounts
+    if (loading || !mounted.current) return;
+
     if (!user) {
-      router.replace('/login');
+      // Use requestAnimationFrame to defer until after the current render cycle
+      const id = requestAnimationFrame(() => {
+        router.replace('/login');
+      });
+      return () => cancelAnimationFrame(id);
     }
-  }, [user]);
+  }, [user, loading]);
 
   return (
     <Stack screenOptions={{ headerShown: false }}>
